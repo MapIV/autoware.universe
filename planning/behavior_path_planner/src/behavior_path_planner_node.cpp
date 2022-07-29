@@ -67,10 +67,6 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   hazard_signal_publisher_ = create_publisher<HazardLightsCommand>("~/output/hazard_lights_cmd", 1);
   debug_drivable_area_publisher_ = create_publisher<OccupancyGrid>("~/debug/drivable_area", 1);
   debug_path_publisher_ = create_publisher<Path>("~/debug/path_for_visualize", 1);
-  debug_avoidance_msg_array_publisher_ =
-    create_publisher<AvoidanceDebugMsgArray>("~/debug/avoidance_debug_message_array", 1);
-  debug_lane_change_msg_array_publisher_ =
-    create_publisher<LaneChangeDebugMsgArray>("~/debug/lane_change_debug_message_array", 1);
   pub_debug_marker_ = create_publisher<MarkerArray>("~/debug/arrow", 20);
 
   if (planner_data_->parameters.visualize_drivable_area_for_shared_linestrings_lanelet) {
@@ -400,7 +396,7 @@ PullOverParameters BehaviorPathPlannerNode::getPullOverParam()
   p.pull_over_velocity = dp("pull_over_velocity", 8.3);
   p.pull_over_minimum_velocity = dp("pull_over_minimum_velocity", 0.3);
   p.after_pull_over_straight_distance = dp("after_pull_over_straight_distance", 3.0);
-  p.before_pull_over_distance = dp("before_pull_over_distance", 3.0);
+  p.before_pull_over_straight_distance = dp("before_pull_over_straight_distance", 3.0);
   // parallel parking
   p.enable_arc_forward_parking = dp("enable_arc_forward_parking", true);
   p.enable_arc_backward_parking = dp("enable_arc_backward_parking", true);
@@ -616,9 +612,6 @@ void BehaviorPathPlannerNode::run()
     hazard_signal_publisher_->publish(hazard_signal);
   }
 
-  // for debug
-  debug_avoidance_msg_array_publisher_->publish(bt_manager_->getAvoidanceDebugMsgArray());
-
   if (planner_data->parameters.visualize_drivable_area_for_shared_linestrings_lanelet) {
     const auto drivable_area_lines = marker_utils::createFurthestLineStringMarkerArray(
       util::getDrivableAreaForAllSharedLinestringLanelets(planner_data));
@@ -648,8 +641,8 @@ PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPath(
     connected_path = modifyPathForSmoothGoalConnection(*path);
   }
 
-  const auto resampled_path =
-    util::resamplePathWithSpline(*path, planner_data_->parameters.path_interval, true);
+  const auto resampled_path = util::resamplePathWithSpline(*path, 2.0, true);
+  // util::resamplePathWithSpline(*path, planner_data_->parameters.path_interval, true);
   return std::make_shared<PathWithLaneId>(resampled_path);
 }
 
@@ -734,15 +727,6 @@ void BehaviorPathPlannerNode::onRoute(const HADMapRoute::ConstSharedPtr msg)
     RCLCPP_DEBUG(get_logger(), "new route is received. reset behavior tree.");
     bt_manager_->resetBehaviorTree();
   }
-}
-
-void BehaviorPathPlannerNode::clipPathLength(PathWithLaneId & path) const
-{
-  const auto ego_pose = planner_data_->self_pose->pose;
-  const double forward = planner_data_->parameters.forward_path_length;
-  const double backward = planner_data_->parameters.backward_path_length;
-
-  util::clipPathLength(path, ego_pose, forward, backward);
 }
 
 PathWithLaneId BehaviorPathPlannerNode::modifyPathForSmoothGoalConnection(

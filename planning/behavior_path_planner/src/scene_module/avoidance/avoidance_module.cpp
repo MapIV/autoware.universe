@@ -2034,7 +2034,8 @@ BehaviorModuleOutput AvoidanceModule::plan()
   }
   output.path = std::make_shared<PathWithLaneId>(avoidance_path.path);
 
-  clipPathLength(*output.path);
+  const size_t ego_idx = findEgoIndex(output.path->points);
+  util::clipPathLength(*output.path, ego_idx, planner_data_->parameters);
 
   DEBUG_PRINT("exit plan(): set prev output (back().lat = %f)", prev_output_.shift_length.back());
 
@@ -2075,7 +2076,8 @@ CandidateOutput AvoidanceModule::planCandidate() const
     output.distance_to_path_change = new_shift_points->front().start_longitudinal;
   }
 
-  clipPathLength(shifted_path.path);
+  const size_t ego_idx = findEgoIndex(shifted_path.path.points);
+  util::clipPathLength(shifted_path.path, ego_idx, planner_data_->parameters);
 
   output.path_candidate = shifted_path.path;
 
@@ -2497,14 +2499,6 @@ void AvoidanceModule::initVariables()
   registered_raw_shift_points_ = {};
   current_raw_shift_points_ = {};
   original_unique_id = 0;
-}
-
-void AvoidanceModule::clipPathLength(PathWithLaneId & path) const
-{
-  const double forward = planner_data_->parameters.forward_path_length;
-  const double backward = planner_data_->parameters.backward_path_length;
-
-  util::clipPathLength(path, getEgoPose().pose, forward, backward);
 }
 
 bool AvoidanceModule::isTargetObjectType(const PredictedObject & object) const

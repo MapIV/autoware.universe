@@ -120,8 +120,6 @@ private:
   PathWithLaneId modifyPathForSmoothGoalConnection(
     const PathWithLaneId & path) const;  // (TODO) move to util
 
-  void clipPathLength(PathWithLaneId & path) const;  // (TODO) move to util
-
   /**
    * @brief Execute behavior tree and publish planned data.
    */
@@ -149,8 +147,6 @@ private:
   rclcpp::Publisher<OccupancyGrid>::SharedPtr debug_drivable_area_publisher_;
   rclcpp::Publisher<MarkerArray>::SharedPtr debug_drivable_area_lanelets_publisher_;
   rclcpp::Publisher<Path>::SharedPtr debug_path_publisher_;
-  rclcpp::Publisher<AvoidanceDebugMsgArray>::SharedPtr debug_avoidance_msg_array_publisher_;
-  rclcpp::Publisher<LaneChangeDebugMsgArray>::SharedPtr debug_lane_change_msg_array_publisher_;
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_debug_marker_;
 
   /**

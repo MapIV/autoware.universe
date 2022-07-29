@@ -160,11 +160,11 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   // set path shifter and generate shifted path
   PathShifter path_shifter{};
   path_shifter.setPath(road_lane_reference_path_to_shift_end);
-  ShiftLine shift_line{};
+  ShiftPoint shift_line{};
   shift_line.start = *shift_start_pose;
   shift_line.end = shift_end_pose;
-  shift_line.end_shift_length = shift_end_road_to_target_distance;
-  path_shifter.addShiftLine(shift_line);
+  shift_line.length = shift_end_road_to_target_distance;
+  path_shifter.addShiftPoint(shift_line);
   ShiftedPath shifted_path{};
   const bool offset_back = true;  // offset front side from reference path
   if (!path_shifter.generate(&shifted_path, offset_back)) return {};
@@ -202,13 +202,12 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   }
 
   // check lane departure with road and shoulder lanes
-  const auto drivable_lanes =
-    util::generateDrivableLanesWithShoulderLanes(road_lanes, shoulder_lanes);
+  auto lanes = road_lanes;
+  lanes.insert(lanes.end(), shoulder_lanes.begin(), shoulder_lanes.end());
   const auto expanded_lanes = util::expandLanelets(
-    drivable_lanes, parameters_.drivable_area_left_bound_offset,
+    lanes, parameters_.drivable_area_left_bound_offset,
     parameters_.drivable_area_right_bound_offset);
-  if (lane_departure_checker_.checkPathWillLeaveLane(
-        util::transformToLanelets(expanded_lanes), shifted_path.path)) {
+  if (lane_departure_checker_.checkPathWillLeaveLane(expanded_lanes, shifted_path.path)) {
     return {};
   }
 
@@ -241,8 +240,8 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   PullOverPath pull_over_path{};
   pull_over_path.path = shifted_path.path;
   pull_over_path.partial_paths.push_back(pull_over_path.path);
-  pull_over_path.start_pose = path_shifter.getShiftLines().front().start;
-  pull_over_path.end_pose = path_shifter.getShiftLines().front().end;
+  pull_over_path.start_pose = path_shifter.getShiftPoints().front().start;
+  pull_over_path.end_pose = path_shifter.getShiftPoints().front().end;
   pull_over_path.debug_poses.push_back(shift_end_pose_road_lane);
   pull_over_path.debug_poses.push_back(actual_shift_end_pose);
 
@@ -337,7 +336,6 @@ double ShiftPullOver::calcBeforeShiftedArcLegth(
   double after_arc_length{0.0};
   for (const auto & [k, segment_length] :
        motion_utils::calcCurvatureAndArcLength(reversed_path.points)) {
-
     // after shifted segment length
     const double after_segment_length =
       k > 0 ? segment_length * (1 + k * dr) : segment_length / (1 - k * dr);

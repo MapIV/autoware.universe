@@ -683,7 +683,7 @@ double PullOverModule::calcMinimumShiftPathDistance() const
   const double pull_over_velocity = parameters_.pull_over_velocity;
   const auto current_pose = planner_data_->self_pose->pose;
   const double distance_after_pull_over = parameters_.after_pull_over_straight_distance;
-  const double distance_before_pull_over = parameters_.before_pull_over_distance;
+  const double distance_before_pull_over = parameters_.before_pull_over_straight_distance;
   const auto & route_handler = planner_data_->route_handler;
 
   double distance_to_left_bound = util::getSignedDistanceFromShoulderLeftBoundary(

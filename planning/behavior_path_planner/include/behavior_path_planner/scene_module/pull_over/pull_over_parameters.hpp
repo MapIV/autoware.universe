@@ -56,7 +56,7 @@ struct PullOverParameters
   double pull_over_velocity;
   double pull_over_minimum_velocity;
   double after_pull_over_straight_distance;
-  double before_pull_over_distance;
+  double before_pull_over_straight_distance;
   // parallel parking
   bool enable_arc_forward_parking;
   bool enable_arc_backward_parking;

@@ -379,11 +379,12 @@ ShiftPoint SideShiftModule::calcShiftPoint() const
     return dist_to_end;
   }();
 
+  const size_t nearest_idx = findEgoIndex(reference_path_->points);
   ShiftPoint shift_point;
   shift_point.length = lateral_offset_;
-  shift_point.start_idx = util::getIdxByArclength(*reference_path_, ego_pose, dist_to_start);
+  shift_point.start_idx = util::getIdxByArclength(*reference_path_, nearest_idx, dist_to_start);
   shift_point.start = reference_path_->points.at(shift_point.start_idx).point.pose;
-  shift_point.end_idx = util::getIdxByArclength(*reference_path_, ego_pose, dist_to_end);
+  shift_point.end_idx = util::getIdxByArclength(*reference_path_, nearest_idx, dist_to_end);
   shift_point.end = reference_path_->points.at(shift_point.end_idx).point.pose;
 
   return shift_point;

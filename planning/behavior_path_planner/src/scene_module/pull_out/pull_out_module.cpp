@@ -126,7 +126,10 @@ bool PullOutModule::isExecutionRequested() const
   const auto pull_out_lanes = pull_out_utils::getPullOutLanes(current_lanes, planner_data_);
   auto lanes = current_lanes;
   lanes.insert(lanes.end(), pull_out_lanes.begin(), pull_out_lanes.end());
-  if (LaneDepartureChecker::isOutOfLane(lanes, vehicle_footprint)) {
+  const auto expanded_lanes = util::expandLanelets(
+    lanes, parameters_.drivable_area_left_bound_offset,
+    parameters_.drivable_area_right_bound_offset);
+  if (LaneDepartureChecker::isOutOfLane(expanded_lanes, vehicle_footprint)) {
     return false;
   }
 
@@ -179,6 +182,7 @@ BehaviorModuleOutput PullOutModule::plan()
   } else {
     path = status_.backward_path;
   }
+
   const auto expanded_lanes = util::expandLanelets(
     status_.lanes, parameters_.drivable_area_left_bound_offset,
     parameters_.drivable_area_right_bound_offset);
@@ -305,7 +309,6 @@ void PullOutModule::planWithPriorityOnEfficientPath(
   status_.planner_type = PlannerType::NONE;
 
   // plan with each planner
-  debug(start_pose_candidates.size());
   for (const auto & planner : pull_out_planners_) {
     for (size_t i = 0; i < start_pose_candidates.size(); ++i) {
       // pull out start pose is current_pose
@@ -398,10 +401,6 @@ void PullOutModule::updatePullOutStatus()
 
   status_.current_lanes = util::getExtendedCurrentLanes(planner_data_);
   status_.pull_out_lanes = pull_out_utils::getPullOutLanes(status_.current_lanes, planner_data_);
-
-  // Get pull_out lanes
-  const auto pull_out_lanes = pull_out_utils::getPullOutLanes(status_.current_lanes, planner_data_);
-  status_.pull_out_lanes = pull_out_lanes;
 
   // combine road and shoulder lanes
   status_.lanes = status_.current_lanes;
