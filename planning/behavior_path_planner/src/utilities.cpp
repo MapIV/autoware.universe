@@ -247,7 +247,7 @@ std::array<double, 4> getPathScope(
 }
 }  // namespace drivable_area_utils
 
-namespace behavior_path_planner ::util
+namespace behavior_path_planner::util
 {
 using autoware_auto_perception_msgs::msg::ObjectClassification;
 using autoware_auto_perception_msgs::msg::Shape;
@@ -1705,13 +1705,11 @@ PathWithLaneId getCenterLinePath(
   const double s_backward = std::max(0., s - backward_path_length);
   double s_forward = s + forward_path_length;
 
-  const double buffer = parameter.backward_length_buffer_for_end_of_lane +
-                        optional_length;  // buffer for min_lane_change_length
   const int num_lane_change =
     std::abs(route_handler.getNumLaneToPreferredLane(lanelet_sequence.back()));
   const double lane_length = lanelet::utils::getLaneletLength2d(lanelet_sequence);
   const double lane_change_buffer =
-    num_lane_change * (parameter.minimum_lane_change_length + buffer);
+    calcLaneChangeBuffer(parameter, std::abs(num_lane_change), optional_length);
 
   if (route_handler.isDeadEndLanelet(lanelet_sequence.back())) {
     s_forward = std::min(s_forward, lane_length - lane_change_buffer);
@@ -1817,7 +1815,7 @@ PathWithLaneId setDecelerationVelocity(
       const double lane_length = lanelet::utils::getLaneletLength2d(lanelet_sequence);
       const auto arclength = lanelet::utils::getArcCoordinates(lanelet_sequence, point.point.pose);
       const double distance_to_end =
-        std::max(0.0, lane_length - lane_change_buffer - arclength.length);
+        std::max(0.0, lane_length - std::abs(lane_change_buffer) - arclength.length);
       point.point.longitudinal_velocity_mps = std::min(
         point.point.longitudinal_velocity_mps,
         static_cast<float>(distance_to_end / lane_change_prepare_duration));
@@ -2270,7 +2268,8 @@ bool isLongitudinalDistanceEnough(
 bool hasEnoughDistance(
   const Pose & expected_ego_pose, const Twist & ego_current_twist,
   const Pose & expected_object_pose, const Twist & object_current_twist,
-  const BehaviorPathPlannerParameters & param, CollisionCheckDebug & debug)
+  const BehaviorPathPlannerParameters & param, const double front_decel, const double rear_decel,
+  CollisionCheckDebug & debug)
 {
   const auto front_vehicle_pose =
     projectCurrentPoseToTarget(expected_ego_pose, expected_object_pose);
@@ -2291,8 +2290,8 @@ bool hasEnoughDistance(
     (is_obj_in_front) ? ego_current_twist.linear : object_current_twist.linear;
   debug.object_twist.linear = (is_obj_in_front) ? front_vehicle_velocity : rear_vehicle_velocity;
 
-  const auto front_vehicle_accel = param.expected_front_deceleration;
-  const auto rear_vehicle_accel = param.expected_rear_deceleration;
+  const auto front_vehicle_accel = front_decel;
+  const auto rear_vehicle_accel = rear_decel;
 
   const auto front_vehicle_stop_threshold = frontVehicleStopDistance(
     util::l2Norm(front_vehicle_velocity), front_vehicle_accel,
@@ -2319,6 +2318,7 @@ bool isSafeInLaneletCollisionCheck(
   const double & check_start_time, const double & check_end_time,
   const double & check_time_resolution, const PredictedObject & target_object,
   const PredictedPath & target_object_path, const BehaviorPathPlannerParameters & common_parameters,
+  const double front_decel, const double rear_decel, Pose & ego_pose_before_collision,
   CollisionCheckDebug & debug)
 {
   const auto lerp_path_reserve = (check_end_time - check_start_time) / check_time_resolution;
@@ -2355,10 +2355,11 @@ bool isSafeInLaneletCollisionCheck(
     const auto & object_twist = target_object.kinematics.initial_twist_with_covariance.twist;
     if (!util::hasEnoughDistance(
           expected_ego_pose, ego_current_twist, expected_obj_pose, object_twist, common_parameters,
-          debug)) {
+          front_decel, rear_decel, debug)) {
       debug.failed_reason = "not_enough_longitudinal";
       return false;
     }
+    ego_pose_before_collision = expected_ego_pose;
   }
   return true;
 }
@@ -2368,7 +2369,8 @@ bool isSafeInFreeSpaceCollisionCheck(
   const PredictedPath & ego_predicted_path, const VehicleInfo & ego_info,
   const double & check_start_time, const double & check_end_time,
   const double & check_time_resolution, const PredictedObject & target_object,
-  const BehaviorPathPlannerParameters & common_parameters, CollisionCheckDebug & debug)
+  const BehaviorPathPlannerParameters & common_parameters, const double front_decel,
+  const double rear_decel, CollisionCheckDebug & debug)
 {
   tier4_autoware_utils::Polygon2d obj_polygon;
   if (!util::calcObjectPolygon(target_object, &obj_polygon)) {
@@ -2399,11 +2401,27 @@ bool isSafeInFreeSpaceCollisionCheck(
     if (!util::hasEnoughDistance(
           expected_ego_pose, ego_current_twist,
           target_object.kinematics.initial_pose_with_covariance.pose, object_twist,
-          common_parameters, debug)) {
+          common_parameters, front_decel, rear_decel, debug)) {
       debug.failed_reason = "not_enough_longitudinal";
       return false;
     }
   }
   return true;
+}
+
+double calcTotalLaneChangeDistanceWithBuffer(const BehaviorPathPlannerParameters & common_param)
+{
+  const double minimum_lane_change_distance =
+    common_param.minimum_lane_change_prepare_distance + common_param.minimum_lane_change_length;
+  const double end_of_lane_buffer = common_param.backward_length_buffer_for_end_of_lane;
+  return minimum_lane_change_distance + end_of_lane_buffer;
+}
+
+double calcLaneChangeBuffer(
+  const BehaviorPathPlannerParameters & common_param, const int num_lane_change,
+  const double length_to_intersection)
+{
+  return num_lane_change * calcTotalLaneChangeDistanceWithBuffer(common_param) +
+         length_to_intersection;
 }
 }  // namespace behavior_path_planner::util

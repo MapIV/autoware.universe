@@ -14,6 +14,7 @@
 
 #include "behavior_path_planner/scene_module/lane_change/util.hpp"
 
+#include "behavior_path_planner/path_utilities.hpp"
 #include "behavior_path_planner/scene_module/utils/path_shifter.hpp"
 #include "behavior_path_planner/utilities.hpp"
 
@@ -108,6 +109,8 @@ std::optional<LaneChangePath> constructCandidatePath(
   candidate_path.preparation_length = prepare_distance;
   candidate_path.lane_change_length = lane_change_distance;
   candidate_path.shift_point = shift_point;
+  candidate_path.reference_lanelets = original_lanelets;
+  candidate_path.target_lanelets = target_lanelets;
 
   const PathPointWithLaneId & lane_changing_start_point = prepare_segment.points.back();
   const PathPointWithLaneId & lane_changing_end_point = lane_changing_segment.points.front();
@@ -172,7 +175,7 @@ LaneChangePaths getLaneChangePaths(
   const auto & lane_change_prepare_duration = parameter.lane_change_prepare_duration;
   const auto & lane_changing_duration = parameter.lane_changing_duration;
   const auto & minimum_lane_change_prepare_distance =
-    parameter.minimum_lane_change_prepare_distance;
+    common_parameter.minimum_lane_change_prepare_distance;
   const auto & minimum_lane_change_length = common_parameter.minimum_lane_change_length;
   const auto & minimum_lane_change_velocity = parameter.minimum_lane_change_velocity;
   const auto & maximum_deceleration = parameter.maximum_deceleration;
@@ -260,8 +263,9 @@ LaneChangePaths getLaneChangePaths(
 
 LaneChangePaths selectValidPaths(
   const LaneChangePaths & paths, const lanelet::ConstLanelets & current_lanes,
-  const lanelet::ConstLanelets & target_lanes, const RouteHandler & route_handler,
-  const Pose & current_pose, const Pose & goal_pose, const double minimum_lane_change_length)
+  const lanelet::ConstLanelets & target_lanes,
+  const lanelet::routing::RoutingGraphContainer & overall_graphs, const Pose & current_pose,
+  const bool isInGoalRouteSection, const Pose & goal_pose)
 {
   LaneChangePaths available_paths;
 
@@ -284,10 +288,14 @@ bool selectSafePath(
   const LaneChangeParameters & ros_parameters, LaneChangePath * selected_path,
   std::unordered_map<std::string, CollisionCheckDebug> & debug_data)
 {
+  debug_data.clear();
   for (const auto & path : paths) {
+    Pose ego_pose_before_collision;
     if (isLaneChangePathSafe(
           path.path, current_lanes, target_lanes, dynamic_objects, current_pose, current_twist,
-          common_parameters, ros_parameters, debug_data, true, path.acceleration)) {
+          common_parameters, ros_parameters, common_parameters.expected_front_deceleration,
+          common_parameters.expected_rear_deceleration, ego_pose_before_collision, debug_data, true,
+          path.acceleration)) {
       *selected_path = path;
       return true;
     }
@@ -353,7 +361,8 @@ bool isLaneChangePathSafe(
   const lanelet::ConstLanelets & target_lanes,
   const PredictedObjects::ConstSharedPtr dynamic_objects, const Pose & current_pose,
   const Twist & current_twist, const BehaviorPathPlannerParameters & common_parameters,
-  const LaneChangeParameters & lane_change_parameters,
+  const LaneChangeParameters & lane_change_parameters, const double front_decel,
+  const double rear_decel, Pose & ego_pose_before_collision,
   std::unordered_map<std::string, CollisionCheckDebug> & debug_data, const bool use_buffer,
   const double acceleration)
 {
@@ -430,8 +439,8 @@ bool isLaneChangePathSafe(
     for (const auto & obj_path : predicted_paths) {
       if (!util::isSafeInLaneletCollisionCheck(
             current_pose, current_twist, vehicle_predicted_path, vehicle_info, check_start_time,
-            check_end_time, time_resolution, obj, obj_path, common_parameters,
-            current_debug_data.second)) {
+            check_end_time, time_resolution, obj, obj_path, common_parameters, front_decel,
+            rear_decel, ego_pose_before_collision, current_debug_data.second)) {
         appendDebugInfo(current_debug_data, false);
         return false;
       }
@@ -467,8 +476,8 @@ bool isLaneChangePathSafe(
       for (const auto & obj_path : predicted_paths) {
         if (!util::isSafeInLaneletCollisionCheck(
               current_pose, current_twist, vehicle_predicted_path, vehicle_info, check_start_time,
-              check_end_time, time_resolution, obj, obj_path, common_parameters,
-              current_debug_data.second)) {
+              check_end_time, time_resolution, obj, obj_path, common_parameters, front_decel,
+              rear_decel, ego_pose_before_collision, current_debug_data.second)) {
           appendDebugInfo(current_debug_data, false);
           return false;
         }
@@ -476,7 +485,8 @@ bool isLaneChangePathSafe(
     } else {
       if (!util::isSafeInFreeSpaceCollisionCheck(
             current_pose, current_twist, vehicle_predicted_path, vehicle_info, check_start_time,
-            check_end_time, time_resolution, obj, common_parameters, current_debug_data.second)) {
+            check_end_time, time_resolution, obj, common_parameters, front_decel, rear_decel,
+            current_debug_data.second)) {
         appendDebugInfo(current_debug_data, false);
         return false;
       }

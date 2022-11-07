@@ -72,8 +72,9 @@ LaneChangePaths getLaneChangePaths(
 
 LaneChangePaths selectValidPaths(
   const LaneChangePaths & paths, const lanelet::ConstLanelets & current_lanes,
-  const lanelet::ConstLanelets & target_lanes, const RouteHandler & route_handler,
-  const Pose & current_pose, const Pose & goal_pose, const double minimum_lane_change_length);
+  const lanelet::ConstLanelets & target_lanes,
+  const lanelet::routing::RoutingGraphContainer & overall_graphs, const Pose & current_pose,
+  const bool isInGoalRouteSection, const Pose & goal_pose);
 
 bool selectSafePath(
   const LaneChangePaths & paths, const lanelet::ConstLanelets & current_lanes,
@@ -89,14 +90,16 @@ bool isLaneChangePathSafe(
   const lanelet::ConstLanelets & target_lanes,
   const PredictedObjects::ConstSharedPtr dynamic_objects, const Pose & current_pose,
   const Twist & current_twist, const BehaviorPathPlannerParameters & common_parameters,
-  const behavior_path_planner::LaneChangeParameters & lane_change_parameters,
+  const LaneChangeParameters & lane_change_parameters, const double front_decel,
+  const double rear_decel, Pose & ego_pose_before_collision,
   std::unordered_map<std::string, CollisionCheckDebug> & debug_data, const bool use_buffer = true,
   const double acceleration = 0.0);
 
 bool hasEnoughDistance(
   const LaneChangePath & path, const lanelet::ConstLanelets & current_lanes,
-  const lanelet::ConstLanelets & target_lanes, const Pose & current_pose, const Pose & goal_pose,
-  const RouteHandler & route_handler, const double minimum_lane_change_length);
+  const lanelet::ConstLanelets & target_lanes, const Pose & current_pose,
+  const bool isInGoalRouteSection, const Pose & goal_pose,
+  const lanelet::routing::RoutingGraphContainer & overall_graphs);
 
 ShiftPoint getLaneChangeShiftPoint(
   const PathWithLaneId & path1, const PathWithLaneId & path2,
@@ -133,6 +136,23 @@ bool isEgoDistanceNearToCenterline(
 bool isEgoHeadingAngleLessThanThreshold(
   const lanelet::ConstLanelet & closest_lanelet, const Pose & current_pose,
   const LaneChangeParameters & lane_change_param);
+void get_turn_signal_info(
+  const LaneChangePath & lane_change_path, TurnSignalInfo * turn_signal_info);
+
+double abortPointDistance(
+  const double starting_velocity, const double param_accel, const double param_jerk,
+  const double param_time);
+std::optional<LaneChangePath> getAbortPaths(
+  const std::shared_ptr<const PlannerData> & planner_data, const LaneChangePath & selected_path,
+  const Pose & ego_lerp_pose_before_collision, const BehaviorPathPlannerParameters & common_param,
+  const LaneChangeParameters & lane_change_param);
+
+double getLateralShift(const LaneChangePath & path);
+
+bool hasEnoughDistanceToLaneChangeAfterAbort(
+  const RouteHandler & route_handler, const lanelet::ConstLanelets & current_lanes,
+  const Pose & curent_pose, const double abort_return_dist,
+  const BehaviorPathPlannerParameters & common_param);
 }  // namespace behavior_path_planner::lane_change_utils
 
 #endif  // BEHAVIOR_PATH_PLANNER__SCENE_MODULE__LANE_CHANGE__UTIL_HPP_

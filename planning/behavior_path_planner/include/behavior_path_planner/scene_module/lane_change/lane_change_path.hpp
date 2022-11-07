@@ -27,11 +27,14 @@ using autoware_auto_planning_msgs::msg::PathWithLaneId;
 struct LaneChangePath
 {
   PathWithLaneId path;
+  lanelet::ConstLanelets reference_lanelets;
+  lanelet::ConstLanelets target_lanelets;
   ShiftedPath shifted_path;
   ShiftPoint shift_point;
   double acceleration{0.0};
   double preparation_length{0.0};
   double lane_change_length{0.0};
+  PathWithLaneId prev_path;
 };
 using LaneChangePaths = std::vector<LaneChangePath>;
 

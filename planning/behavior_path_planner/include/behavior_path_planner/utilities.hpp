@@ -165,6 +165,12 @@ bool calcObjectPolygon(const PredictedObject & object, Polygon2d * object_polygo
 bool calcObjectPolygon(
   const Shape & object_shape, const Pose & object_pose, Polygon2d * object_polygon);
 
+<<<<<<< HEAD
+=======
+bool calcObjectPolygon(
+  const Shape & object_shape, const Pose & object_pose, Polygon2d * object_polygon);
+
+>>>>>>> fd5ac602e (feat(behavior_path_planner): revise lane change module (#1139))
 PredictedPath resamplePredictedPath(
   const PredictedPath & input_path, const double resolution, const double duration);
 
@@ -366,7 +372,8 @@ bool isLongitudinalDistanceEnough(
 bool hasEnoughDistance(
   const Pose & expected_ego_pose, const Twist & ego_current_twist,
   const Pose & expected_object_pose, const Twist & object_current_twist,
-  const BehaviorPathPlannerParameters & param, CollisionCheckDebug & debug);
+  const BehaviorPathPlannerParameters & param, const double front_decel, const double rear_decel,
+  CollisionCheckDebug & debug);
 
 bool isLateralDistanceEnough(
   const double & relative_lateral_distance, const double & lateral_distance_threshold);
@@ -377,6 +384,7 @@ bool isSafeInLaneletCollisionCheck(
   const double & check_start_time, const double & check_end_time,
   const double & check_time_resolution, const PredictedObject & target_object,
   const PredictedPath & target_object_path, const BehaviorPathPlannerParameters & common_parameters,
+  const double front_decel, const double rear_decel, Pose & ego_pose_before_collision,
   CollisionCheckDebug & debug);
 
 bool isSafeInFreeSpaceCollisionCheck(
@@ -384,7 +392,14 @@ bool isSafeInFreeSpaceCollisionCheck(
   const PredictedPath & ego_predicted_path, const VehicleInfo & ego_info,
   const double & check_start_time, const double & check_end_time,
   const double & check_time_resolution, const PredictedObject & target_object,
-  const BehaviorPathPlannerParameters & common_parameters, CollisionCheckDebug & debug);
+  const BehaviorPathPlannerParameters & common_parameters, const double front_decel,
+  const double rear_decel, CollisionCheckDebug & debug);
+
+double calcTotalLaneChangeDistanceWithBuffer(const BehaviorPathPlannerParameters & common_param);
+
+double calcLaneChangeBuffer(
+  const BehaviorPathPlannerParameters & common_param, const int num_lane_change,
+  const double length_to_intersection);
 }  // namespace behavior_path_planner::util
 
 #endif  // BEHAVIOR_PATH_PLANNER__UTILITIES_HPP_
