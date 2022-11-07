@@ -25,6 +25,8 @@ struct BehaviorPathPlannerParameters
   double backward_length_buffer_for_end_of_pull_over;
   double backward_length_buffer_for_end_of_pull_out;
   double minimum_lane_change_length;
+  double minimum_lane_change_prepare_distance;
+
   double minimum_pull_over_length;
   double minimum_pull_out_length;
   double drivable_area_resolution;
@@ -38,6 +40,9 @@ struct BehaviorPathPlannerParameters
   double turn_light_on_threshold_dis_lat;
   double turn_light_on_threshold_dis_long;
   double turn_light_on_threshold_time;
+
+  double ego_nearest_dist_threshold;
+  double ego_nearest_yaw_threshold;
 
   // vehicle info
   vehicle_info_util::VehicleInfo vehicle_info;
@@ -54,6 +59,19 @@ struct BehaviorPathPlannerParameters
 
   // drivable area visualization
   bool visualize_drivable_area_for_shared_linestrings_lanelet;
+
+  // collision check
+  double lateral_distance_max_threshold;
+  double longitudinal_distance_min_threshold;
+
+  double expected_front_deceleration;  // brake parameter under normal lane change
+  double expected_rear_deceleration;   // brake parameter under normal lane change
+
+  double expected_front_deceleration_for_abort;  // hard brake parameter for abort
+  double expected_rear_deceleration_for_abort;   // hard brake parameter for abort
+
+  double rear_vehicle_reaction_time;
+  double rear_vehicle_safety_time_margin;
 };
 
 #endif  // BEHAVIOR_PATH_PLANNER__PARAMETERS_HPP_

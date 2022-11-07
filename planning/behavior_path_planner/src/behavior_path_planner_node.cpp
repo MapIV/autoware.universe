@@ -57,9 +57,10 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   using std::chrono_literals::operator""ms;
 
   // data_manager
+  common_param_ptr_ = std::make_shared<BehaviorPathPlannerParameters>(getCommonParam());
   {
     planner_data_ = std::make_shared<PlannerData>();
-    planner_data_->parameters = getCommonParam();
+    planner_data_->parameters = std::ref(*common_param_ptr_);
   }
 
   // publisher
@@ -72,6 +73,8 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   debug_path_publisher_ = create_publisher<Path>("~/debug/path_for_visualize", 1);
   debug_avoidance_msg_array_publisher_ =
     create_publisher<AvoidanceDebugMsgArray>("~/debug/avoidance_debug_message_array", 1);
+  debug_lane_change_msg_array_publisher_ =
+    create_publisher<LaneChangeDebugMsgArray>("~/debug/lane_change_debug_message_array", 1);
 
   // For remote operation
   plan_ready_publisher_ = create_publisher<PathChangeModule>("~/output/ready", 1);
@@ -121,6 +124,9 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   route_subscriber_ = create_subscription<HADMapRoute>(
     "~/input/route", qos_transient_local, std::bind(&BehaviorPathPlannerNode::onRoute, this, _1),
     createSubscriptionOptions(this));
+  lane_change_param_ptr = std::make_shared<LaneChangeParameters>(getLaneChangeParam());
+  m_set_param_res = this->add_on_set_parameters_callback(
+    std::bind(&BehaviorPathPlannerNode::onSetParam, this, std::placeholders::_1));
 
   // behavior tree manager
   {
@@ -140,10 +146,8 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
       std::make_shared<LaneFollowingModule>("LaneFollowing", *this, getLaneFollowingParam());
     bt_manager_->registerSceneModule(lane_following_module);
 
-    const auto lane_change_param = getLaneChangeParam();
-
     auto lane_change_module =
-      std::make_shared<LaneChangeModule>("LaneChange", *this, lane_change_param);
+      std::make_shared<LaneChangeModule>("LaneChange", *this, lane_change_param_ptr);
     bt_manager_->registerSceneModule(lane_change_module);
 
     auto pull_over_module = std::make_shared<PullOverModule>("PullOver", *this, getPullOverParam());
@@ -213,6 +217,9 @@ BehaviorPathPlannerParameters BehaviorPathPlannerNode::getCommonParam()
   p.backward_length_buffer_for_end_of_pull_out =
     declare_parameter("backward_length_buffer_for_end_of_pull_out", 5.0);
   p.minimum_lane_change_length = declare_parameter("minimum_lane_change_length", 8.0);
+  p.minimum_lane_change_prepare_distance =
+    declare_parameter("minimum_lane_change_prepare_distance", 2.0);
+
   p.minimum_pull_over_length = declare_parameter("minimum_pull_over_length", 15.0);
   p.drivable_area_resolution = declare_parameter<double>("drivable_area_resolution");
   p.drivable_lane_forward_length = declare_parameter<double>("drivable_lane_forward_length");
@@ -225,7 +232,22 @@ BehaviorPathPlannerParameters BehaviorPathPlannerNode::getCommonParam()
   p.turn_light_on_threshold_time = declare_parameter("turn_light_on_threshold_time", 3.0);
   p.visualize_drivable_area_for_shared_linestrings_lanelet =
     declare_parameter("visualize_drivable_area_for_shared_linestrings_lanelet", true);
+  p.ego_nearest_dist_threshold = declare_parameter<double>("ego_nearest_dist_threshold");
+  p.ego_nearest_yaw_threshold = declare_parameter<double>("ego_nearest_yaw_threshold");
 
+  p.lateral_distance_max_threshold = declare_parameter("lateral_distance_max_threshold", 3.0);
+  p.longitudinal_distance_min_threshold =
+    declare_parameter("longitudinal_distance_min_threshold", 3.0);
+  p.expected_front_deceleration = declare_parameter("expected_front_deceleration", -1.0);
+  p.expected_rear_deceleration = declare_parameter("expected_rear_deceleration", -1.0);
+  p.rear_vehicle_reaction_time = declare_parameter("rear_vehicle_reaction_time", 2.0);
+
+  p.expected_front_deceleration_for_abort =
+    declare_parameter("expected_front_deceleration_for_abort", -2.0);
+  p.expected_rear_deceleration_for_abort =
+    declare_parameter("expected_rear_deceleration_for_abort", -2.5);
+
+  p.rear_vehicle_safety_time_margin = declare_parameter("rear_vehicle_safety_time_margin", 2.0);
   return p;
 }
 
@@ -329,27 +351,47 @@ LaneChangeParameters BehaviorPathPlannerNode::getLaneChangeParam()
   };
 
   LaneChangeParameters p{};
-  p.min_stop_distance = dp("min_stop_distance", 5.0);
-  p.stop_time = dp("stop_time", 2.0);
-  p.hysteresis_buffer_distance = dp("hysteresis_buffer_distance", 2.0);
+  // trajectory generation
   p.lane_change_prepare_duration = dp("lane_change_prepare_duration", 2.0);
-  p.lane_changing_duration = dp("lane_changing_duration", 4.0);
+  p.lane_changing_safety_check_duration = dp("lane_changing_safety_check_duration", 4.0);
+  p.lane_changing_lateral_jerk = dp("lane_changing_lateral_jerk", 0.5);
+  p.lane_changing_lateral_acc = dp("lane_changing_lateral_acc", 0.5);
+  p.minimum_lane_change_prepare_distance = dp("minimum_lane_change_prepare_distance", 4.0);
   p.lane_change_finish_judge_buffer = dp("lane_change_finish_judge_buffer", 3.0);
-  p.minimum_lane_change_velocity = dp("minimum_lane_change_velocity", 8.3);
-  p.prediction_duration = dp("prediction_duration", 8.0);
+  p.minimum_lane_change_velocity = dp("minimum_lane_change_velocity", 5.6);
   p.prediction_time_resolution = dp("prediction_time_resolution", 0.5);
-  p.static_obstacle_velocity_thresh = dp("static_obstacle_velocity_thresh", 0.1);
   p.maximum_deceleration = dp("maximum_deceleration", 1.0);
   p.lane_change_sampling_num = dp("lane_change_sampling_num", 10);
-  p.enable_abort_lane_change = dp("enable_abort_lane_change", true);
+
+  // collision check
   p.enable_collision_check_at_prepare_phase = dp("enable_collision_check_at_prepare_phase", true);
+  p.prepare_phase_ignore_target_speed_thresh = dp("prepare_phase_ignore_target_speed_thresh", 0.1);
   p.use_predicted_path_outside_lanelet = dp("use_predicted_path_outside_lanelet", true);
-  p.use_all_predicted_path = dp("use_all_predicted_path", false);
+  p.use_all_predicted_path = dp("use_all_predicted_path", true);
+
+  // abort
+  p.enable_cancel_lane_change = dp("enable_cancel_lane_change", true);
+  p.enable_abort_lane_change = dp("enable_abort_lane_change", false);
+
   p.abort_lane_change_velocity_thresh = dp("abort_lane_change_velocity_thresh", 0.5);
   p.abort_lane_change_angle_thresh =
     dp("abort_lane_change_angle_thresh", tier4_autoware_utils::deg2rad(10.0));
   p.abort_lane_change_distance_thresh = dp("abort_lane_change_distance_thresh", 0.3);
-  p.enable_blocked_by_obstacle = dp("enable_blocked_by_obstacle", false);
+
+  p.abort_begin_min_longitudinal_thresh = dp("abort_begin_min_longitudinal_thresh", 4.0);
+  p.abort_begin_max_longitudinal_thresh = dp("abort_begin_max_longitudinal_thresh", 6.0);
+  p.abort_begin_duration = dp("abort_begin_duration", 3.0);
+
+  p.abort_return_min_longitudinal_thresh = dp("abort_return_min_longitudinal_thresh", 12.0);
+  p.abort_return_max_longitudinal_thresh = dp("abort_return_max_longitudinal_thresh", 16.0);
+  p.abort_return_duration = dp("abort_return_duration", 6.0);
+
+  p.abort_expected_deceleration = dp("abort_expected_deceleration", 0.1);
+  p.abort_longitudinal_jerk = dp("abort_longitudinal_jerk", 0.5);
+
+  p.abort_max_lateral_jerk = dp("abort_max_lateral_jerk", 5.0);
+
+  p.publish_debug_marker = dp("publish_debug_marker", false);
 
   // validation of parameters
   if (p.lane_change_sampling_num < 1) {
@@ -571,18 +613,19 @@ void BehaviorPathPlannerNode::run()
 
   // path handling
   const auto path = getPath(output, planner_data);
-  const auto path_candidate = getPathCandidate(output, planner_data);
 
   // update planner data
   planner_data_->prev_output_path = path;
   mutex_pd_.unlock();
 
   PathWithLaneId clipped_path;
-  if (skipSmoothGoalConnection(bt_manager_->getModulesStatus())) {
+  const auto module_status_ptr_vec = bt_manager_->getModulesStatus();
+  if (skipSmoothGoalConnection(module_status_ptr_vec)) {
     clipped_path = *path;
   } else {
     clipped_path = modifyPathForSmoothGoalConnection(*path);
   }
+
   clipPathLength(clipped_path);
   if (!clipped_path.points.empty()) {
     path_publisher_->publish(clipped_path);
@@ -591,6 +634,7 @@ void BehaviorPathPlannerNode::run()
       get_logger(), *get_clock(), 5000, "behavior path output is empty! Stop publish.");
   }
 
+  const auto path_candidate = getPathCandidate(output, planner_data);
   path_candidate_publisher_->publish(util::toPath(*path_candidate));
 
   // debug_path_publisher_->publish(util::toPath(path));
@@ -616,8 +660,18 @@ void BehaviorPathPlannerNode::run()
   }
 
   // for debug
-  debug_avoidance_msg_array_publisher_->publish(bt_manager_->getAvoidanceDebugMsgArray());
   publishDebugMarker(bt_manager_->getDebugMarkers());
+
+  const auto debug_data = bt_manager_->get_all_debug_data();
+  const auto avoidance_debug = debug_data->get_avoidance_debug_msg_array();
+  if (avoidance_debug) {
+    debug_avoidance_msg_array_publisher_->publish(*avoidance_debug);
+  }
+
+  const auto lc_debug = debug_data->get_lane_change_debug_msg_array();
+  if (lc_debug) {
+    debug_lane_change_msg_array_publisher_->publish(*lc_debug);
+  }
 
   if (planner_data->parameters.visualize_drivable_area_for_shared_linestrings_lanelet) {
     const auto drivable_area_lines = marker_utils::createFurthestLineStringMarkerArray(
@@ -647,12 +701,39 @@ PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPathCandidate(
 {
   auto path_candidate =
     bt_output.path_candidate ? bt_output.path_candidate : std::make_shared<PathWithLaneId>();
+
+  if (isForcedCandidatePath()) {
+    for (auto & path_point : path_candidate->points) {
+      path_point.point.longitudinal_velocity_mps = 0.0;
+    }
+  }
+
   path_candidate->header = planner_data->route_handler->getRouteHeader();
   path_candidate->header.stamp = this->now();
   RCLCPP_DEBUG(
     get_logger(), "BehaviorTreeManager: path candidate is %s.",
     bt_output.path_candidate ? "FOUND" : "NOT FOUND");
   return path_candidate;
+}
+
+bool BehaviorPathPlannerNode::isForcedCandidatePath() const
+{
+  const auto & module_status_ptr_vec = bt_manager_->getModulesStatus();
+  for (const auto & module_status_ptr : module_status_ptr_vec) {
+    if (!module_status_ptr) {
+      continue;
+    }
+    if (module_status_ptr->module_name != "LaneChange") {
+      continue;
+    }
+    const auto & is_waiting_approval = module_status_ptr->is_waiting_approval;
+    const auto & is_execution_ready = module_status_ptr->is_execution_ready;
+    if (is_waiting_approval && !is_execution_ready) {
+      return true;
+    }
+    break;
+  }
+  return false;
 }
 
 bool BehaviorPathPlannerNode::skipSmoothGoalConnection(
@@ -741,6 +822,36 @@ void BehaviorPathPlannerNode::clipPathLength(PathWithLaneId & path) const
   const double backward = planner_data_->parameters.backward_path_length;
 
   util::clipPathLength(path, ego_pose, forward, backward);
+}
+SetParametersResult BehaviorPathPlannerNode::onSetParam(
+  const std::vector<rclcpp::Parameter> & parameters)
+{
+  rcl_interfaces::msg::SetParametersResult result;
+
+  if (!lane_change_param_ptr && !common_param_ptr_) {
+    result.successful = false;
+    result.reason = "param not initialized";
+    return result;
+  }
+
+  result.successful = true;
+  result.reason = "success";
+
+  try {
+    update_param(
+      parameters, "lane_change.publish_debug_marker", lane_change_param_ptr->publish_debug_marker);
+    update_param(
+      parameters, "lateral_distance_max_threshold",
+      common_param_ptr_->lateral_distance_max_threshold);
+    update_param(
+      parameters, "longitudinal_distance_min_threshold",
+      common_param_ptr_->longitudinal_distance_min_threshold);
+  } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
+    result.successful = false;
+    result.reason = e.what();
+  }
+
+  return result;
 }
 
 PathWithLaneId BehaviorPathPlannerNode::modifyPathForSmoothGoalConnection(

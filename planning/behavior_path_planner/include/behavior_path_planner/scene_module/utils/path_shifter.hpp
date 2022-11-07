@@ -74,6 +74,16 @@ public:
   void setPath(const PathWithLaneId & path);
 
   /**
+   * @brief  Set velocity used to apply a lateral acceleration limit.
+   */
+  void setVelocity(const double velocity);
+
+  /**
+   * @brief  Set acceleration limit
+   */
+  void setLateralAccelerationLimit(const double acc);
+
+  /**
    * @brief  Add shift point. You don't have to care about the start/end_idx.
    */
   void addShiftPoint(const ShiftPoint & point);
@@ -119,6 +129,9 @@ public:
     }
     return 4.0 * std::pow(0.5 * l / j, 1.0 / 3.0) * v;
   }
+
+  static double calcShiftTimeFromJerkAndJerk(
+    const double lateral, const double jerk, const double acc);
 
   static double calcJerkFromLatLonDistance(
     const double lateral, const double longitudinal, const double velocity)
@@ -170,8 +183,8 @@ public:
   }
 
   /**
-   * @brief  Calculate the theoretical lateral jerk by spline shifting for current shift_points_.
-   * @return Jerk array. THe size is same as the shift points.
+   * @brief  Calculate the theoretical lateral jerk by spline shifting for current shift_lines_.
+   * @return Jerk array. The size is same as the shift points.
    */
   std::vector<double> calcLateralJerk();
 
@@ -194,8 +207,20 @@ private:
 
   // Flag to check the path index is aligned. (cleared when new path or shift points are received)
   bool is_index_aligned_{false};
+  // Used to apply a lateral acceleration limit
+  double velocity_{0.0};
 
-  rclcpp::Logger logger_{rclcpp::get_logger("behavior_path_planner").get_child("path_shifter")};
+  // lateral acceleration limit considered in the path planning
+  double acc_limit_{-1.0};
+
+  // Logger
+  mutable rclcpp::Logger logger_{rclcpp::get_logger("behavior_path_planner").get_child("path_shifter")};
+
+  std::pair<std::vector<double>, std::vector<double>> calcBaseLengths(
+    const double arclength, const double shift_length, const bool offset_back) const;
+
+  std::pair<std::vector<double>, std::vector<double>> getBaseLengthsWithoutAccelLimit(
+    const double arclength, const double shift_length, const bool offset_back) const;
 
   /**
    * @brief Calculate path index for shift_points and set is_index_aligned_ to true.
