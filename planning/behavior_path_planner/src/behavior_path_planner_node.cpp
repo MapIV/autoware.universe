@@ -68,6 +68,7 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
     create_publisher<AvoidanceDebugMsgArray>("~/debug/avoidance_debug_message_array", 1);
   debug_lane_change_msg_array_publisher_ =
     create_publisher<LaneChangeDebugMsgArray>("~/debug/lane_change_debug_message_array", 1);
+  pub_debug_marker_ = create_publisher<MarkerArray>("~/debug/arrow", 20);
 
   if (planner_data_->parameters.visualize_drivable_area_for_shared_linestrings_lanelet) {
     debug_drivable_area_lanelets_publisher_ =
@@ -450,7 +451,6 @@ PullOverParameters BehaviorPathPlannerNode::getPullOverParam()
   p.pull_over_velocity = dp("pull_over_velocity", 8.3);
   p.pull_over_minimum_velocity = dp("pull_over_minimum_velocity", 0.3);
   p.after_pull_over_straight_distance = dp("after_pull_over_straight_distance", 3.0);
-  p.before_pull_over_straight_distance = dp("before_pull_over_straight_distance", 3.0);
   // parallel parking
   p.enable_arc_forward_parking = dp("enable_arc_forward_parking", true);
   p.enable_arc_backward_parking = dp("enable_arc_backward_parking", true);
@@ -513,12 +513,12 @@ PullOutParameters BehaviorPathPlannerNode::getPullOutParam()
   p.th_stopped_velocity = dp("th_stopped_velocity", 0.01);
   p.th_stopped_time = dp("th_stopped_time", 1.0);
   p.collision_check_margin = dp("collision_check_margin", 1.0);
+  p.collision_check_distance_from_end = dp("collision_check_distance_from_end", 3.0);
   p.pull_out_finish_judge_buffer = dp("pull_out_finish_judge_buffer", 1.0);
   // shift pull out
   p.enable_shift_pull_out = dp("enable_shift_pull_out", true);
   p.shift_pull_out_velocity = dp("shift_pull_out_velocity", 8.3);
   p.pull_out_sampling_num = dp("pull_out_sampling_num", 4);
-  p.before_pull_out_straight_distance = dp("before_pull_out_straight_distance", 3.0);
   p.minimum_shift_pull_out_distance = dp("minimum_shift_pull_out_distance", 20.0);
   p.maximum_lateral_jerk = dp("maximum_lateral_jerk", 3.0);
   p.minimum_lateral_jerk = dp("minimum_lateral_jerk", 1.0);
