@@ -1017,9 +1017,10 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
   const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(goal.position);
   const double distance = boost::geometry::distance(
     goal_lanelet.polygon2d().basicPolygon(), lanelet::utils::to2D(lanelet_point).basicPoint());
-  if (distance < std::numeric_limits<double>::epsilon()) {
-    return goal;
-  }
+  // if (distance < std::numeric_limits<double>::epsilon()) {
+  //   std::cerr << "close goal, " << "distance: " << distance << std::endl;
+  //   return goal;
+  // }
 
   const auto segment = lanelet::utils::getClosestSegment(
     lanelet::utils::to2D(lanelet_point), goal_lanelet.centerline());
