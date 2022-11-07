@@ -247,22 +247,21 @@ bool PullOverModule::isExecutionReady() const { return true; }
 
 Pose PullOverModule::calcRefinedGoal() const
 {
-  lanelet::ConstLanelet goal_lane;
   Pose goal_pose = planner_data_->route_handler->getGoalPose();
 
   lanelet::Lanelet closest_shoulder_lanelet;
   lanelet::utils::query::getClosestLanelet(
     planner_data_->route_handler->getShoulderLanelets(), goal_pose, &closest_shoulder_lanelet);
 
-  const Pose center_pose =
-    lanelet::utils::getClosestCenterPose(closest_shoulder_lanelet, goal_pose.position);
+  auto center_pose = util::refineGoal(goal_pose, closest_shoulder_lanelet);
 
-  const double distance_to_left_bound = util::getSignedDistanceFromShoulderLeftBoundary(
-    planner_data_->route_handler->getShoulderLanelets(), center_pose);
-  const double offset_from_center_line = distance_to_left_bound +
-                                         planner_data_->parameters.vehicle_width / 2 +
-                                         parameters_.margin_from_boundary;
-  const Pose refined_goal_pose = calcOffsetPose(center_pose, 0, -offset_from_center_line, 0);
+  // const Pose center_pose =
+  //   lanelet::utils::getClosestCenterPose(closest_shoulder_lanelet, goal_pose.position);
+  const double distance_from_left_bound = util::getSignedDistanceFromShoulderLeftBoundary(
+    planner_data_->route_handler->getShoulderLanelets(), vehicle_footprint_, center_pose);
+  const double offset_from_center_line =
+    distance_from_left_bound + parameters_.margin_from_boundary;
+  const auto refined_goal_pose = calcOffsetPose(center_pose, 0, -offset_from_center_line, 0);
 
   return refined_goal_pose;
 }
@@ -705,14 +704,12 @@ double PullOverModule::calcMinimumShiftPathDistance() const
   const double pull_over_velocity = parameters_.pull_over_velocity;
   const auto current_pose = planner_data_->self_pose->pose;
   const double distance_after_pull_over = parameters_.after_pull_over_straight_distance;
-  const double distance_before_pull_over = parameters_.before_pull_over_straight_distance;
+  const double distance_before_pull_over = parameters_.before_pull_over_distance;
   const auto & route_handler = planner_data_->route_handler;
 
   double distance_to_left_bound = util::getSignedDistanceFromShoulderLeftBoundary(
-    route_handler->getShoulderLanelets(), current_pose);
-  double offset_from_center_line = distance_to_left_bound +
-                                   planner_data_->parameters.vehicle_width / 2 +
-                                   parameters_.margin_from_boundary;
+    route_handler->getShoulderLanelets(), vehicle_footprint_, current_pose);
+  double offset_from_center_line = distance_to_left_bound + parameters_.margin_from_boundary;
 
   // calculate minimum pull over distance at pull over velocity, maximum jerk and side offset
   const double pull_over_distance_min = PathShifter::calcLongitudinalDistFromJerk(
@@ -822,17 +819,12 @@ void PullOverModule::setDebugData()
 
   if (parameters_.enable_goal_research) {
     // Visualize pull over areas
-    const Pose start_pose =
-      calcOffsetPose(refined_goal_pose_, -parameters_.backward_goal_search_length, 0, 0);
-    const Pose end_pose =
-      calcOffsetPose(refined_goal_pose_, parameters_.forward_goal_search_length, 0, 0);
     const auto header = planner_data_->route_handler->getRouteHeader();
     const auto color = status_.has_decided_path ? createMarkerColor(1.0, 1.0, 0.0, 0.999)  // yellow
                                                 : createMarkerColor(0.0, 1.0, 0.0, 0.999);  // green
-    const auto p = planner_data_->parameters;
-    debug_marker_.markers.push_back(pull_over_utils::createPullOverAreaMarker(
-      start_pose, end_pose, 0, header, p.base_link2front, p.base_link2rear, p.vehicle_width,
-      color));
+    const double z = refined_goal_pose_.position.z;
+    add(pull_over_utils::createPullOverAreaMarkerArray(
+      goal_searcher_->getAreaPolygons(), header, color, z));
 
     // Visualize goal candidates
     add(pull_over_utils::createGoalCandidatesMarkerArray(goal_candidates_, color));
@@ -843,8 +835,15 @@ void PullOverModule::setDebugData()
     add(createPoseMarkerArray(
       status_.pull_over_path.start_pose, "pull_over_start_pose", 0, 0.3, 0.3, 0.9));
     add(createPoseMarkerArray(
-      status_.pull_over_path.end_pose, "pull_over_end_pose", 0, 0.9, 0.9, 0.3));
+      status_.pull_over_path.end_pose, "pull_over_end_pose", 0, 0.3, 0.3, 0.9));
     add(createPathMarkerArray(getFullPath(), "full_path", 0, 0.0, 0.5, 0.9));
+  }
+
+  // Visualize debug poses
+  const auto & debug_poses = status_.pull_over_path.debug_poses;
+  for (size_t i = 0; i < debug_poses.size(); ++i) {
+    add(createPoseMarkerArray(
+      debug_poses.at(i), "debug_pose_" + std::to_string(i), 0, 0.3, 0.3, 0.3));
   }
 }
 

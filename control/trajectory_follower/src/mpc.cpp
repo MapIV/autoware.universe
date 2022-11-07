@@ -187,7 +187,8 @@ void MPC::setReferenceTrajectory(
   trajectory_follower::MPCTrajectory mpc_traj_smoothed;   // smooth filtered trajectory
 
   /* resampling */
-  trajectory_follower::MPCUtils::convertToMPCTrajectory(trajectory_msg, mpc_traj_raw);
+  trajectory_follower::MPCUtils::convertToMPCTrajectory(
+    trajectory_msg, m_param.min_vel, mpc_traj_raw);
   if (!trajectory_follower::MPCUtils::resampleMPCTrajectoryByDistance(
         mpc_traj_raw, traj_resample_dist, &mpc_traj_resampled)) {
     RCLCPP_WARN(m_logger, "[setReferenceTrajectory] spline error when resampling by distance");
@@ -214,6 +215,38 @@ void MPC::setReferenceTrajectory(
         path_filter_moving_ave_num, mpc_traj_smoothed.vx)) {
       RCLCPP_DEBUG(m_logger, "path callback: filtering error. stop filtering.");
       mpc_traj_smoothed = mpc_traj_resampled;
+    }
+  }
+
+  /* extend terminal points */
+  {
+    // set original raw termianl yaw
+    auto & traj = mpc_traj_smoothed;
+    traj.yaw.back() = mpc_traj_raw.yaw.back();
+
+    // get terminal pose
+    autoware_auto_planning_msgs::msg::Trajectory autoware_traj;
+    autoware::motion::control::trajectory_follower::MPCUtils::convertToAutowareTrajectory(
+      traj, autoware_traj);
+    auto extended_pose = autoware_traj.points.back().pose;
+
+    constexpr double extend_dist = 10.0;
+    const double extend_interval = traj_resample_dist;
+    const size_t num_extended_point = static_cast<size_t>(extend_dist / extend_interval);
+    for (size_t i = 0; i < num_extended_point; ++i) {
+      const double x_offset = m_is_forward_shift ? extend_interval : -extend_interval;
+      extended_pose = tier4_autoware_utils::calcOffsetPose(extended_pose, x_offset, 0.0, 0.0);
+      const double x = extended_pose.position.x;
+      const double y = extended_pose.position.y;
+      const double z = extended_pose.position.z;
+      // calc relative time
+      const double dx = x - traj.x.back();
+      const double dy = y - traj.y.back();
+      const double dz = z - traj.z.back();
+      const double dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+      const double t = traj.relative_time.back() + dist / m_param.min_vel;
+      traj.push_back(
+        x, y, z, traj.yaw.back(), m_param.min_vel, traj.k.back(), traj.smooth_k.back(), t);
     }
   }
 
@@ -498,7 +531,7 @@ trajectory_follower::MPCTrajectory MPC::applyVelocityDynamicsFilter(
 
   trajectory_follower::MPCTrajectory output = input;
   trajectory_follower::MPCUtils::dynamicSmoothingVelocity(
-    static_cast<size_t>(nearest_idx), v0, acc_lim, tau, output);
+    static_cast<size_t>(nearest_idx), v0, acc_lim, tau, m_param.min_vel, output);
   const double t_ext = 100.0;  // extra time to prevent mpc calculation failure due to short time
   const double t_end = output.relative_time.back() + t_ext;
   const double v_end = 0.0;
