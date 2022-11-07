@@ -44,7 +44,8 @@ std::vector<double> calcPathArcLengthArray(
 double calcPathArcLength(
   const PathWithLaneId & path, size_t start = 0, size_t end = std::numeric_limits<size_t>::max());
 
-PathWithLaneId resamplePathWithSpline(const PathWithLaneId & path, double interval);
+PathWithLaneId resamplePathWithSpline(
+  const PathWithLaneId & path, const double interval, const bool keep_input_point = false);
 
 Path toPath(const PathWithLaneId & input);
 

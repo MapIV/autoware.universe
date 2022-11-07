@@ -259,8 +259,8 @@ Pose PullOverModule::calcRefinedGoal() const
   //   lanelet::utils::getClosestCenterPose(closest_shoulder_lanelet, goal_pose.position);
   const double distance_from_left_bound = util::getSignedDistanceFromShoulderLeftBoundary(
     planner_data_->route_handler->getShoulderLanelets(), vehicle_footprint_, center_pose);
-  const double offset_from_center_line = distance_from_left_bound +
-                                         parameters_.margin_from_boundary;
+  const double offset_from_center_line =
+    distance_from_left_bound + parameters_.margin_from_boundary;
   const auto refined_goal_pose = calcOffsetPose(center_pose, 0, -offset_from_center_line, 0);
 
   return refined_goal_pose;
@@ -682,7 +682,7 @@ double PullOverModule::calcMinimumShiftPathDistance() const
   const double maximum_jerk = parameters_.maximum_lateral_jerk;
   const double pull_over_velocity = parameters_.pull_over_velocity;
   const auto current_pose = planner_data_->self_pose->pose;
-  const double distance_after_pull_over = parameters_.after_pull_over_distance;
+  const double distance_after_pull_over = parameters_.after_pull_over_straight_distance;
   const double distance_before_pull_over = parameters_.before_pull_over_distance;
   const auto & route_handler = planner_data_->route_handler;
 

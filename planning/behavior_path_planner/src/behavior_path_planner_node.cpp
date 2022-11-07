@@ -69,6 +69,9 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   debug_path_publisher_ = create_publisher<Path>("~/debug/path_for_visualize", 1);
   debug_avoidance_msg_array_publisher_ =
     create_publisher<AvoidanceDebugMsgArray>("~/debug/avoidance_debug_message_array", 1);
+  debug_lane_change_msg_array_publisher_ =
+    create_publisher<LaneChangeDebugMsgArray>("~/debug/lane_change_debug_message_array", 1);
+  pub_debug_marker_ = create_publisher<MarkerArray>("~/debug/arrow", 20);
 
   if (planner_data_->parameters.visualize_drivable_area_for_shared_linestrings_lanelet) {
     debug_drivable_area_lanelets_publisher_ =
@@ -396,7 +399,7 @@ PullOverParameters BehaviorPathPlannerNode::getPullOverParam()
   p.deceleration_interval = dp("deceleration_interval", 10.0);
   p.pull_over_velocity = dp("pull_over_velocity", 8.3);
   p.pull_over_minimum_velocity = dp("pull_over_minimum_velocity", 0.3);
-  p.after_pull_over_distance = dp("after_pull_over_distance", 3.0);
+  p.after_pull_over_straight_distance = dp("after_pull_over_straight_distance", 3.0);
   p.before_pull_over_distance = dp("before_pull_over_distance", 3.0);
   // parallel parking
   p.enable_arc_forward_parking = dp("enable_arc_forward_parking", true);
@@ -575,15 +578,15 @@ void BehaviorPathPlannerNode::run()
   planner_data_->prev_output_path = path;
   mutex_pd_.unlock();
 
-  PathWithLaneId clipped_path;
-  if (skipSmoothGoalConnection(bt_manager_->getModulesStatus())) {
-    clipped_path = *path;
-  } else {
-    clipped_path = modifyPathForSmoothGoalConnection(*path);
-  }
-  clipPathLength(clipped_path);
-  if (!clipped_path.points.empty()) {
-    path_publisher_->publish(clipped_path);
+  const size_t target_idx = findEgoIndex(path->points);
+  util::clipPathLength(*path, target_idx, planner_data_->parameters);
+
+  if (!path->points.empty()) {
+    path_publisher_->publish(*path);
+    MarkerArray arrow_marker{};
+    tier4_autoware_utils::appendMarkerArray(
+      marker_utils::createPathMarkerArray(*path, "path", 0, 1.0, 0.0, 0.0), &arrow_marker);
+    pub_debug_marker_->publish(arrow_marker);
   } else {
     RCLCPP_ERROR_THROTTLE(
       get_logger(), *get_clock(), 5000, "behavior path output is empty! Stop publish.");
@@ -636,7 +639,18 @@ PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPath(
   path->header.stamp = this->now();
   RCLCPP_DEBUG(
     get_logger(), "BehaviorTreeManager: output is %s.", bt_output.path ? "FOUND" : "NOT FOUND");
-  return path;
+
+  PathWithLaneId connected_path;
+  const auto module_status_ptr_vec = bt_manager_->getModulesStatus();
+  if (skipSmoothGoalConnection(module_status_ptr_vec)) {
+    connected_path = *path;
+  } else {
+    connected_path = modifyPathForSmoothGoalConnection(*path);
+  }
+
+  const auto resampled_path =
+    util::resamplePathWithSpline(*path, planner_data_->parameters.path_interval, true);
+  return std::make_shared<PathWithLaneId>(resampled_path);
 }
 
 PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPathCandidate(

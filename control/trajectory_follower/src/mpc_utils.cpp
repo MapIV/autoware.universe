@@ -240,8 +240,9 @@ std::vector<float64_t> calcTrajectoryCurvature(
   return curvature_vec;
 }
 
-bool8_t convertToMPCTrajectory(
-  const autoware_auto_planning_msgs::msg::Trajectory & input, MPCTrajectory & output)
+bool convertToMPCTrajectory(
+  const autoware_auto_planning_msgs::msg::Trajectory & input, const double min_vel,
+  MPCTrajectory & output)
 {
   output.clear();
   for (const autoware_auto_planning_msgs::msg::TrajectoryPoint & p : input.points) {
@@ -254,7 +255,7 @@ bool8_t convertToMPCTrajectory(
     const float64_t t = 0.0;
     output.push_back(x, y, z, yaw, vx, k, k, t);
   }
-  calcMPCTrajectoryTime(output);
+  calcMPCTrajectoryTime(min_vel, output);
   return true;
 }
 
@@ -276,17 +277,17 @@ bool8_t convertToAutowareTrajectory(
   return true;
 }
 
-bool8_t calcMPCTrajectoryTime(MPCTrajectory & traj)
+bool calcMPCTrajectoryTime(const double min_vel, MPCTrajectory & traj)
 {
   float64_t t = 0.0;
   traj.relative_time.clear();
   traj.relative_time.push_back(t);
   for (size_t i = 0; i < traj.x.size() - 1; ++i) {
-    const float64_t dx = traj.x.at(i + 1) - traj.x.at(i);
-    const float64_t dy = traj.y.at(i + 1) - traj.y.at(i);
-    const float64_t dz = traj.z.at(i + 1) - traj.z.at(i);
-    const float64_t dist = std::sqrt(dx * dx + dy * dy + dz * dz);
-    const float64_t v = std::max(std::fabs(traj.vx.at(i)), 0.1);
+    const double dx = traj.x.at(i + 1) - traj.x.at(i);
+    const double dy = traj.y.at(i + 1) - traj.y.at(i);
+    const double dz = traj.z.at(i + 1) - traj.z.at(i);
+    const double dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+    const double v = std::max(std::fabs(traj.vx.at(i)), min_vel);
     t += (dist / v);
     traj.relative_time.push_back(t);
   }
@@ -294,8 +295,8 @@ bool8_t calcMPCTrajectoryTime(MPCTrajectory & traj)
 }
 
 void dynamicSmoothingVelocity(
-  const size_t start_idx, const float64_t start_vel, const float64_t acc_lim, const float64_t tau,
-  MPCTrajectory & traj)
+  const size_t start_idx, const double start_vel, const double acc_lim, const double tau,
+  const double min_vel, MPCTrajectory & traj)
 {
   float64_t curr_v = start_vel;
   traj.vx.at(start_idx) = start_vel;
@@ -311,7 +312,7 @@ void dynamicSmoothingVelocity(
     curr_v = curr_v + dv;
     traj.vx.at(i) = curr_v;
   }
-  calcMPCTrajectoryTime(traj);
+  calcMPCTrajectoryTime(min_vel, traj);
 }
 
 int64_t calcNearestIndex(const MPCTrajectory & traj, const geometry_msgs::msg::Pose & self_pose)

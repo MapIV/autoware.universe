@@ -31,6 +31,7 @@
 
 using motion_utils::calcLongitudinalOffsetPose;
 using tier4_autoware_utils::calcOffsetPose;
+
 namespace behavior_path_planner
 {
 PullOutModule::PullOutModule(
@@ -164,6 +165,7 @@ BehaviorModuleOutput PullOutModule::plan()
 {
   BehaviorModuleOutput output;
   if (!status_.is_safe) {
+    RCLCPP_INFO(getLogger(), "not found safe path");
     return output;
   }
 
@@ -300,8 +302,10 @@ void PullOutModule::planWithPriorityOnEfficientPath(
   const std::vector<Pose> & start_pose_candidates, const Pose & goal_pose)
 {
   status_.is_safe = false;
+  status_.planner_type = PlannerType::NONE;
 
   // plan with each planner
+  debug(start_pose_candidates.size());
   for (const auto & planner : pull_out_planners_) {
     for (size_t i = 0; i < start_pose_candidates.size(); ++i) {
       // pull out start pose is current_pose
@@ -331,6 +335,7 @@ void PullOutModule::planWithPriorityOnShortBackDistance(
   const std::vector<Pose> & start_pose_candidates, const Pose & goal_pose)
 {
   status_.is_safe = false;
+  status_.planner_type = PlannerType::NONE;
 
   for (size_t i = 0; i < start_pose_candidates.size(); ++i) {
     // pull out start pose is current_pose
@@ -356,6 +361,33 @@ void PullOutModule::planWithPriorityOnShortBackDistance(
     // pull out start pose is not current_pose(index > 0), so need back.
     status_.back_finished = false;
   }
+}
+
+void PullOutModule::generateStopPath()
+{
+  const auto & current_pose = planner_data_->self_pose->pose;
+  constexpr double dummy_path_distance = 1.0;
+  const auto & moved_pose = calcOffsetPose(current_pose, dummy_path_distance, 0, 0);
+
+  // convert Pose to PathPointWithLaneId with 0 velocity.
+  auto toPathPointWithLaneId = [this](const Pose & pose) {
+    PathPointWithLaneId p{};
+    p.point.pose = pose;
+    p.point.longitudinal_velocity_mps = 0.0;
+    lanelet::Lanelet closest_shoulder_lanelet;
+    lanelet::utils::query::getClosestLanelet(
+      planner_data_->route_handler->getShoulderLanelets(), pose, &closest_shoulder_lanelet);
+    p.lane_ids.push_back(closest_shoulder_lanelet.id());
+    return p;
+  };
+
+  PathWithLaneId path{};
+  path.points.push_back(toPathPointWithLaneId(current_pose));
+  path.points.push_back(toPathPointWithLaneId(moved_pose));
+
+  status_.pull_out_path.partial_paths.push_back(path);
+  status_.pull_out_path.start_pose = current_pose;
+  status_.pull_out_path.end_pose = current_pose;
 }
 
 void PullOutModule::updatePullOutStatus()
@@ -397,12 +429,14 @@ void PullOutModule::updatePullOutStatus()
       getLogger(),
       "search_priority should be efficient_path or short_back_distance, but %s is given.",
       parameters_.search_priority.c_str());
+    throw std::domain_error("[pull_out] invalid search_priority");
   }
 
   if (!status_.is_safe) {
-    RCLCPP_ERROR_THROTTLE(getLogger(), *clock_, 5000, "Not found safe pull out path");
-    status_.is_safe = false;
-    return;
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000, "Not found safe pull out path, generate stop path");
+    status_.back_finished = true;  // no need to drive backward
+    generateStopPath();
   }
 
   checkBackFinished();

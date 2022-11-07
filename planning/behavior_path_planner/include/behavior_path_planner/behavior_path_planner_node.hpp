@@ -150,6 +150,41 @@ private:
   rclcpp::Publisher<MarkerArray>::SharedPtr debug_drivable_area_lanelets_publisher_;
   rclcpp::Publisher<Path>::SharedPtr debug_path_publisher_;
   rclcpp::Publisher<AvoidanceDebugMsgArray>::SharedPtr debug_avoidance_msg_array_publisher_;
+  rclcpp::Publisher<LaneChangeDebugMsgArray>::SharedPtr debug_lane_change_msg_array_publisher_;
+  rclcpp::Publisher<MarkerArray>::SharedPtr pub_debug_marker_;
+
+  /**
+   * @brief check path if it is unsafe or forced
+   */
+  bool isForcedCandidatePath() const;
+
+  /**
+   * @brief publish steering factor from intersection
+   */
+  void publish_steering_factor(const TurnIndicatorsCommand & turn_signal);
+
+  /**
+   * @brief publish debug messages
+   */
+  void publishSceneModuleDebugMsg();
+
+  template <class T>
+  size_t findEgoIndex(const std::vector<T> & points) const
+  {
+    const auto & p = planner_data_;
+    return motion_utils::findFirstNearestIndexWithSoftConstraints(
+      points, p->self_pose->pose, p->parameters.ego_nearest_dist_threshold,
+      p->parameters.ego_nearest_yaw_threshold);
+  }
+
+  template <class T>
+  size_t findEgoSegmentIndex(const std::vector<T> & points) const
+  {
+    const auto & p = planner_data_;
+    return motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+      points, p->self_pose->pose, p->parameters.ego_nearest_dist_threshold,
+      p->parameters.ego_nearest_yaw_threshold);
+  }
 };
 }  // namespace behavior_path_planner
 

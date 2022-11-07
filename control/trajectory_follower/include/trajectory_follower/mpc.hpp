@@ -71,7 +71,9 @@ struct MPCParam
   //!< @brief for trajectory velocity calculation
   float64_t velocity_time_constant;
   //!< @brief minimum prediction dist for low velocity
-  float64_t min_prediction_length;
+  double min_prediction_length;
+  //!< @brief minimum velocity for relative time
+  double min_vel;
   //!< @brief time constant for steer model
   float64_t steer_tau;
   // for weight matrix Q
