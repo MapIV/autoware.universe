@@ -91,17 +91,11 @@ bool isPathShapeChanged(
 }
 
 bool isPathGoalChanged(
-  const double current_vel,
   const std::vector<autoware_auto_planning_msgs::msg::PathPoint> & path_points,
   const std::unique_ptr<std::vector<autoware_auto_planning_msgs::msg::PathPoint>> &
     prev_path_points)
 {
   if (!prev_path_points) {
-    return false;
-  }
-
-  constexpr double min_vel = 1e-3;
-  if (std::abs(current_vel) > min_vel) {
     return false;
   }
 
@@ -995,7 +989,7 @@ bool ObstacleAvoidancePlanner::checkReplan(
     return true;
   }
 
-  if (isPathGoalChanged(current_twist_ptr_->twist.linear.x, path_points, prev_path_points_ptr_)) {
+  if (isPathGoalChanged(path_points, prev_path_points_ptr_)) {
     RCLCPP_INFO(get_logger(), "Replan with resetting optimization since path goal was changed.");
     resetPrevOptimization();
     return true;
