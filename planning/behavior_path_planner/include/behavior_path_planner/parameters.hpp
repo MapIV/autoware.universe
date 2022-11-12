@@ -70,6 +70,8 @@ struct BehaviorPathPlannerParameters
   double expected_rear_deceleration;
   double rear_vehicle_reaction_time;
   double rear_vehicle_safety_time_margin;
+
+  double planning_hz;
 };
 
 #endif  // BEHAVIOR_PATH_PLANNER__PARAMETERS_HPP_

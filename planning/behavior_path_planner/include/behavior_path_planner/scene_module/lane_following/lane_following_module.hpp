@@ -53,9 +53,11 @@ public:
 
 private:
   LaneFollowingParameters parameters_;
+  mutable std::shared_ptr<const lanelet::ConstLanelet> prev_nearest_lane_ptr_{nullptr};
 
   PathWithLaneId getReferencePath() const;
   void initParam();
+  boost::optional<lanelet::ConstLanelet> getCurrentLanelet() const;
 };
 }  // namespace behavior_path_planner
 

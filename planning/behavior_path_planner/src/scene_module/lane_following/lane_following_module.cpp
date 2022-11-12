@@ -74,6 +74,29 @@ void LaneFollowingModule::setParameters(const LaneFollowingParameters & paramete
   parameters_ = parameters;
 }
 
+boost::optional<lanelet::ConstLanelet> LaneFollowingModule::getCurrentLanelet() const
+{
+  const auto & p = planner_data_;
+  const auto & current_pose = p->self_pose->pose;
+  const bool commit_to_prev_lane = true;
+
+  if (commit_to_prev_lane && prev_nearest_lane_ptr_) {
+    constexpr double search_length_offset = 10.0;
+    const double search_length =
+      p->self_odometry->twist.twist.linear.x * p->parameters.planning_hz + search_length_offset;
+
+    return p->route_handler->getClosestLaneletWithinRoute(
+      current_pose, *prev_nearest_lane_ptr_, search_length);
+  }
+
+  lanelet::ConstLanelet current_lane;
+  if (p->route_handler->getClosestLaneletWithinRoute(current_pose, &current_lane)) {
+    return current_lane;
+  }
+
+  return {};
+}
+
 PathWithLaneId LaneFollowingModule::getReferencePath() const
 {
   PathWithLaneId reference_path{};
@@ -85,12 +108,14 @@ PathWithLaneId LaneFollowingModule::getReferencePath() const
   // Set header
   reference_path.header = route_handler->getRouteHeader();
 
-  lanelet::ConstLanelet current_lane;
-  if (!planner_data_->route_handler->getClosestLaneletWithinRoute(current_pose, &current_lane)) {
-    RCLCPP_ERROR_THROTTLE(
-      getLogger(), *clock_, 5000, "failed to find closest lanelet within route!!!");
+  // Get current lane
+  const auto current_lane_opt = getCurrentLanelet();
+  if (!current_lane_opt) {
     return reference_path;  // TODO(Horibe)
   }
+  const auto current_lane = current_lane_opt.get();
+  std::cerr << current_lane.id() << std::endl;
+  prev_nearest_lane_ptr_ = std::make_shared<const lanelet::ConstLanelet>(current_lane);
 
   // For current_lanes with desired length
   lanelet::ConstLanelets current_lanes = planner_data_->route_handler->getLaneletSequence(

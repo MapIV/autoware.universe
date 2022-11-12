@@ -162,6 +162,7 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
     const auto period_ns = rclcpp::Rate(planning_hz).period();
     timer_ = rclcpp::create_timer(
       this, get_clock(), period_ns, std::bind(&BehaviorPathPlannerNode::run, this));
+    planner_data_->parameters.planning_hz = planning_hz;
   }
 }
 
