@@ -480,12 +480,10 @@ PidLongitudinalController::ControlState PidLongitudinalController::updateControl
   // flags for state transition
   const auto & p = m_state_transition_params;
 
-  const bool8_t departure_condition_from_stopping =
-    stop_dist > p.drive_state_stop_dist + p.drive_state_offset_stop_dist;
-  const bool8_t departure_condition_from_stopped = stop_dist > p.drive_state_stop_dist;
+  const bool8_t departure_condition_from_stopping = true;
+  const bool8_t departure_condition_from_stopped = true;
 
-  const bool8_t keep_stopped_condition =
-    m_enable_keep_stopped_until_steer_convergence && !lateral_sync_data_.is_steer_converged;
+  const bool8_t keep_stopped_condition = false;
 
   const bool8_t stopping_condition = stop_dist < p.stopping_state_stop_dist;
   if (
