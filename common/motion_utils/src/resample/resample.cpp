@@ -86,13 +86,13 @@ std::vector<geometry_msgs::msg::Pose> resamplePoseVector(
   });
   const bool is_driving_forward =
     tier4_autoware_utils::isDrivingForward(points.at(0), points.at(1));
-  if (std::abs(arc_length - resampled_arclength.back() < 1e-3)) {
-    const auto terminal_orientation =
-      is_driving_forward ? points.back().orientation : points.front().orientation;
-    motion_utils::insertOrientation(resampled_points, is_driving_forward, terminal_orientation);
-  } else {
-    motion_utils::insertOrientation(resampled_points, is_driving_forward);
-  }
+  // if (std::abs(arc_length - resampled_arclength.back() < 1e-3)) {
+  //   const auto terminal_orientation =
+  //     is_driving_forward ? points.back().orientation : points.front().orientation;
+  //   motion_utils::insertOrientation(resampled_points, is_driving_forward, terminal_orientation);
+  // } else {
+  motion_utils::insertOrientation(resampled_points, is_driving_forward);
+  // }
 
   // Initial orientation is depend on the initial value of the resampled_arclength
   // when backward driving
