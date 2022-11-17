@@ -205,7 +205,7 @@ std::vector<float64_t> calcTrajectoryCurvature(
   geometry_msgs::msg::Point p1, p2, p3;
   const size_t max_smoothing_num =
     static_cast<size_t>(std::floor(0.5 * (static_cast<float64_t>(traj.x.size() - 1))));
-  const size_t L = std::min(curvature_smoothing_num, max_smoothing_num);
+  [[maybe_unused]] const size_t L = std::min(curvature_smoothing_num, max_smoothing_num); // todo: remove
 
   std::vector<double> arclength{};
   calcMPCTrajectoryArclength(traj, &arclength);
