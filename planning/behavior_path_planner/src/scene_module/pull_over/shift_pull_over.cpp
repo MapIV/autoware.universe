@@ -189,10 +189,11 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   const std::vector<double> base_x{shift_last_pose.position.x, goal_pose.position.x};
   const std::vector<double> base_y{shift_last_pose.position.y, goal_pose.position.y};
   std::vector<double> new_s;
-  for (double s = resample_interval_; s < base_s.back() - resample_interval_;
-       s += resample_interval_) {
+  for (double s = 0.1; s < base_s.back() - 0.2; s += resample_interval_) {
     new_s.push_back(s);
   }
+  new_s.push_back(base_s.back() - 0.1);
+
   const std::vector<double> interpolated_x = splineTwoPoints(
     base_s, base_x, std::cos(tf2::getYaw(shift_last_pose.orientation)),
     std::cos(tf2::getYaw(goal_pose.orientation)), new_s);

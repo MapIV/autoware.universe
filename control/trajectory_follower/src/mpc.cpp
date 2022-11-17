@@ -218,6 +218,7 @@ void MPC::setReferenceTrajectory(
     const float64_t ego_yaw = tf2::getYaw(current_pose_ptr->pose.orientation);
     trajectory_follower::MPCUtils::calcTrajectoryYawFromXY(
       &mpc_traj_smoothed, nearest_idx, ego_yaw);
+    mpc_traj_smoothed.yaw.back() = mpc_traj_raw.yaw.back();
     trajectory_follower::MPCUtils::convertEulerAngleToMonotonic(&mpc_traj_smoothed.yaw);
   }
 
