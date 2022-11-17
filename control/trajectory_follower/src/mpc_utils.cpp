@@ -206,31 +206,37 @@ std::vector<float64_t> calcTrajectoryCurvature(
   const size_t max_smoothing_num =
     static_cast<size_t>(std::floor(0.5 * (static_cast<float64_t>(traj.x.size() - 1))));
   const size_t L = std::min(curvature_smoothing_num, max_smoothing_num);
-  for (size_t i = L; i < traj.x.size() - L; ++i) {
-    const size_t curr_idx = i;
-    const size_t prev_idx = curr_idx - L;
-    const size_t next_idx = curr_idx + L;
-    p1.x = traj.x[prev_idx];
-    p2.x = traj.x[curr_idx];
-    p3.x = traj.x[next_idx];
-    p1.y = traj.y[prev_idx];
-    p2.y = traj.y[curr_idx];
-    p3.y = traj.y[next_idx];
-    const float64_t den = std::max(
-      distance_2d<float64_t>(p1, p2) * distance_2d<float64_t>(p2, p3) *
-        distance_2d<float64_t>(p3, p1),
-      std::numeric_limits<float64_t>::epsilon());
-    const float64_t curvature =
-      2.0 * ((p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)) / den;
-    curvature_vec.at(curr_idx) = curvature;
+
+  std::vector<double> arclength{};
+  calcMPCTrajectoryArclength(traj, &arclength);
+
+  for (size_t i = 1; i < traj.x.size() - 1; ++i) {
+    // const size_t curr_idx = i;
+    // const size_t prev_idx = curr_idx - L;
+    // const size_t next_idx = curr_idx + L;
+    // p1.x = traj.x[prev_idx];
+    // p2.x = traj.x[curr_idx];
+    // p3.x = traj.x[next_idx];
+    // p1.y = traj.y[prev_idx];
+    // p2.y = traj.y[curr_idx];
+    // p3.y = traj.y[next_idx];
+    // const double den = std::max(
+    //   distance_2d<double>(p1, p2) * distance_2d<double>(p2, p3) * distance_2d<double>(p3, p1),
+    //   std::numeric_limits<double>::epsilon());
+    // const double curvature =
+    //   2.0 * ((p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)) / den;
+    const double curvature = (traj.yaw[i + 1] - traj.yaw[i]) / (arclength[i + 1] - arclength[i]);
+    curvature_vec.at(i) = curvature;
   }
+  curvature_vec.at(0) = curvature_vec.at(1);
+  curvature_vec.at(traj.x.size() - 1) = curvature_vec.at(traj.x.size() - 2);
 
   /* first and last curvature is copied from next value */
-  for (size_t i = 0; i < std::min(L, traj.x.size()); ++i) {
-    curvature_vec.at(i) = curvature_vec.at(std::min(L, traj.x.size() - 1));
-    curvature_vec.at(traj.x.size() - i - 1) =
-      curvature_vec.at(std::max(traj.x.size() - L - 1, size_t(0)));
-  }
+  // for (size_t i = 0; i < std::min(L, traj.x.size()); ++i) {
+  //   curvature_vec.at(i) = curvature_vec.at(std::min(L, traj.x.size() - 1));
+  //   curvature_vec.at(traj.x.size() - i - 1) =
+  //     curvature_vec.at(std::max(traj.x.size() - L - 1, size_t(0)));
+  // }
   return curvature_vec;
 }
 

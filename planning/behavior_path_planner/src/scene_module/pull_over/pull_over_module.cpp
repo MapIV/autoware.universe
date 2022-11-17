@@ -437,7 +437,7 @@ BehaviorModuleOutput PullOverModule::plan()
     auto & path = status_.pull_over_path.partial_paths.at(i);
     const auto p = planner_data_->parameters;
     path.drivable_area = util::generateDrivableArea(
-      path, status_.lanes, p.drivable_area_resolution, p.vehicle_length, planner_data_);
+      path, lane, p.drivable_area_resolution, p.vehicle_length, planner_data_);
   }
 
   BehaviorModuleOutput output;
