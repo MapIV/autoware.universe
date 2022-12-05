@@ -221,9 +221,6 @@ BehaviorPathPlannerParameters BehaviorPathPlannerNode::getCommonParam()
   p.backward_length_buffer_for_end_of_pull_out =
     declare_parameter("backward_length_buffer_for_end_of_pull_out", 5.0);
   p.minimum_lane_change_length = declare_parameter("minimum_lane_change_length", 8.0);
-  p.minimum_lane_change_prepare_distance =
-    declare_parameter("minimum_lane_change_prepare_distance", 2.0);
-
   p.minimum_pull_over_length = declare_parameter("minimum_pull_over_length", 15.0);
   p.drivable_area_resolution = declare_parameter<double>("drivable_area_resolution");
   p.drivable_lane_forward_length = declare_parameter<double>("drivable_lane_forward_length");
@@ -708,7 +705,7 @@ PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPathCandidate(
 
   if (isForcedCandidatePath()) {
     for (auto & path_point : path_candidate->points) {
-      path_point.point.longitudinal_velocity_mps = 0.0;
+      path_point.point.longitudinal_velocity_mps = 1.0;
     }
   }
 
