@@ -44,11 +44,6 @@
 namespace behavior_path_planner
 {
 using autoware_auto_planning_msgs::msg::PathWithLaneId;
-<<<<<<< HEAD
-using marker_utils::CollisionCheckDebug;
-using tier4_planning_msgs::msg::LaneChangeDebugMsg;
-using tier4_planning_msgs::msg::LaneChangeDebugMsgArray;
-=======
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
 using lane_departure_checker::LaneDepartureChecker;
@@ -69,7 +64,6 @@ inline std::string_view toStr(const LaneChangeStates state)
   }
   return "UNKNOWN";
 }
->>>>>>> fd5ac602e (feat(behavior_path_planner): revise lane change module (#1139))
 
 class LaneChangeModule : public SceneModuleInterface
 {
@@ -77,11 +71,6 @@ public:
   LaneChangeModule(
     const std::string & name, rclcpp::Node & node,
     std::shared_ptr<LaneChangeParameters> parameters);
-<<<<<<< HEAD
-
-  BehaviorModuleOutput run() override;
-=======
->>>>>>> fd5ac602e (feat(behavior_path_planner): revise lane change module (#1139))
 
   bool isExecutionRequested() const override;
   bool isExecutionReady() const override;
@@ -95,12 +84,7 @@ public:
   void onExit() override;
 
   std::shared_ptr<LaneChangeDebugMsgArray> get_debug_msg_array() const;
-<<<<<<< HEAD
-  void accept_visitor(
-    [[maybe_unused]] const std::shared_ptr<SceneModuleVisitor> & visitor) const override;
-=======
   void accept_visitor(const std::shared_ptr<SceneModuleVisitor> & visitor) const override;
->>>>>>> fd5ac602e (feat(behavior_path_planner): revise lane change module (#1139))
 
   void publishRTCStatus() override
   {
@@ -124,14 +108,11 @@ private:
   LaneChangeStatus status_;
   PathShifter path_shifter_;
   mutable LaneChangeDebugMsgArray lane_change_debug_msg_array_;
-<<<<<<< HEAD
-=======
   LaneDepartureChecker lane_departure_checker_;
   mutable LaneChangeStates current_lane_change_state_;
   mutable std::shared_ptr<LaneChangePath> abort_path_;
   PathWithLaneId prev_approved_path_;
   mutable Pose abort_non_collision_pose_;
->>>>>>> fd5ac602e (feat(behavior_path_planner): revise lane change module (#1139))
 
   double lane_change_lane_length_{200.0};
   double check_distance_{100.0};
@@ -253,20 +234,11 @@ private:
   bool isApprovedPathSafe(Pose & ego_pose_before_collision) const;
 
   bool isSafe() const;
-<<<<<<< HEAD
-=======
   bool isValidPath(const PathWithLaneId & path) const;
->>>>>>> fd5ac602e (feat(behavior_path_planner): revise lane change module (#1139))
   bool isNearEndOfLane() const;
   bool isCurrentSpeedLow() const;
   bool isAbortConditionSatisfied();
   bool hasFinishedLaneChange() const;
-<<<<<<< HEAD
-
-  void setObjectDebugVisualization() const;
-  mutable std::unordered_map<std::string, CollisionCheckDebug> object_debug_;
-  mutable std::vector<LaneChangePath> debug_valid_path_;
-=======
   bool isStopState() const;
   bool isAbortState() const;
 
@@ -281,7 +253,6 @@ private:
   mutable std::vector<LaneChangePath> debug_valid_path_;
 
   void setObjectDebugVisualization() const;
->>>>>>> fd5ac602e (feat(behavior_path_planner): revise lane change module (#1139))
 };
 }  // namespace behavior_path_planner
 
