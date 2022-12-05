@@ -91,8 +91,8 @@ bool isLaneChangePathSafe(
   const lanelet::ConstLanelets & target_lanes,
   const PredictedObjects::ConstSharedPtr dynamic_objects, const Pose & current_pose,
   const Twist & current_twist, const BehaviorPathPlannerParameters & common_parameters,
-  const LaneChangeParameters & lane_change_parameters, const double front_decel,
-  const double rear_decel, Pose & ego_pose_before_collision,
+  const behavior_path_planner::LaneChangeParameters & lane_change_parameters,
+  Pose & ego_pose_before_collision,
   std::unordered_map<std::string, CollisionCheckDebug> & debug_data, const bool use_buffer = true,
   const double acceleration = 0.0);
 
@@ -137,21 +137,9 @@ bool isEgoHeadingAngleLessThanThreshold(
 void get_turn_signal_info(
   const LaneChangePath & lane_change_path, TurnSignalInfo * turn_signal_info);
 
-double abortPointDistance(
-  const double starting_velocity, const double param_accel, const double param_jerk,
-  const double param_time);
-std::optional<LaneChangePath> getAbortPaths(
+std::optional<LaneChangeAbortPath> get_abort_paths(
   const std::shared_ptr<const PlannerData> & planner_data, const LaneChangePath & selected_path,
-  const Pose & ego_lerp_pose_before_collision, const BehaviorPathPlannerParameters & common_param,
-  const LaneChangeParameters & lane_change_param);
-
-double getLateralShift(const LaneChangePath & path);
-
-bool hasEnoughDistanceToLaneChangeAfterAbort(
-  const RouteHandler & route_handler, const lanelet::ConstLanelets & current_lanes,
-  const Pose & curent_pose, const double abort_return_dist,
-  const BehaviorPathPlannerParameters & common_param,
-  const LaneChangeParameters & lane_change_param);
+  const Pose & ego_lerp_pose_before_collision, ShiftPoint & shift);
 }  // namespace behavior_path_planner::lane_change_utils
 
 #endif  // BEHAVIOR_PATH_PLANNER__SCENE_MODULE__LANE_CHANGE__UTIL_HPP_
