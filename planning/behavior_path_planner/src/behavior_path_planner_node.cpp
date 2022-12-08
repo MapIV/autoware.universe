@@ -734,7 +734,7 @@ PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPath(
   }
 
   const auto resampled_path =
-    util::resamplePathWithSpline(connected_path, planner_data_->parameters.path_interval);
+    util::resamplePathWithSpline(connected_path, planner_data_->parameters.path_interval, true);
   return std::make_shared<PathWithLaneId>(resampled_path);
 }
 
