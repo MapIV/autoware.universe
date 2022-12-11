@@ -81,6 +81,7 @@ void LaneChangeModule::onExit()
 {
   initParameters();
   resetParameters();
+  publishPathCandidate();
   current_state_ = BT::NodeStatus::SUCCESS;
   RCLCPP_DEBUG(getLogger(), "LANE_CHANGE onExit");
 }
@@ -225,6 +226,7 @@ BehaviorModuleOutput LaneChangeModule::planWaitingApproval()
     }
   }
 
+  publishPathCandidate(candidate);
   updateRTCStatus(candidate);
   waitApproval();
   is_abort_path_approved_ = false;
