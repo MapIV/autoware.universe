@@ -165,12 +165,6 @@ bool calcObjectPolygon(const PredictedObject & object, Polygon2d * object_polygo
 bool calcObjectPolygon(
   const Shape & object_shape, const Pose & object_pose, Polygon2d * object_polygon);
 
-<<<<<<< HEAD
-=======
-bool calcObjectPolygon(
-  const Shape & object_shape, const Pose & object_pose, Polygon2d * object_polygon);
-
->>>>>>> fd5ac602e (feat(behavior_path_planner): revise lane change module (#1139))
 PredictedPath resamplePredictedPath(
   const PredictedPath & input_path, const double resolution, const double duration);
 
