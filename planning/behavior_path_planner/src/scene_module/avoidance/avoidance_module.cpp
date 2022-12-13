@@ -1963,6 +1963,8 @@ BehaviorModuleOutput AvoidanceModule::plan()
 {
   DEBUG_PRINT("AVOIDANCE plan");
 
+  resetPathCandidate();
+
   const auto shift_points = calcShiftPoints(current_raw_shift_points_, debug_data_);
 
   const auto new_shift_points = findNewShiftPoint(shift_points, path_shifter_);
@@ -2093,7 +2095,7 @@ BehaviorModuleOutput AvoidanceModule::planWaitingApproval()
     clearWaitingApproval();
     removeCandidateRTCStatus();
   }
-  publishPathCandidate(candidate);
+  path_candidate_ = std::make_shared<PathWithLaneId>(candidate.path_candidate);
   return out;
 }
 
@@ -2478,7 +2480,6 @@ void AvoidanceModule::onExit()
 void AvoidanceModule::setParameters(const AvoidanceParameters & parameters)
 {
   parameters_ = parameters;
-  publishPathCandidate();
 }
 
 void AvoidanceModule::initVariables()
@@ -2494,6 +2495,7 @@ void AvoidanceModule::initVariables()
   debug_marker_.markers.clear();
   registered_raw_shift_points_ = {};
   current_raw_shift_points_ = {};
+  resetPathCandidate();
   original_unique_id = 0;
 }
 
