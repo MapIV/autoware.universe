@@ -549,8 +549,8 @@ bool ExternalRequestLaneChangeModule::isAbortConditionSatisfied(
       std::unordered_map<std::string, CollisionCheckDebug> debug_data;
 
       return lane_change_utils::isLaneChangePathSafe(
-        path.path, current_lanes, check_lanes, dynamic_objects, current_pose, current_twist, common_parameters, *parameters_,
-        debug_data, false, status.lane_change_path.acceleration);
+        path.path, current_lanes, check_lanes, dynamic_objects, current_pose, current_twist,
+        common_parameters, *parameters_, debug_data, false, status.lane_change_path.acceleration);
     });
 
   // abort only if velocity is low or vehicle pose is close enough
@@ -675,7 +675,7 @@ void ExternalRequestLaneChangeModule::resetParameters()
 {
   clearWaitingApproval();
   removeRTCStatus();
-  //steering_factor_interface_ptr_->clearSteeringFactors();
+  // steering_factor_interface_ptr_->clearSteeringFactors();
   object_debug_.clear();
   debug_marker_.markers.clear();
 }

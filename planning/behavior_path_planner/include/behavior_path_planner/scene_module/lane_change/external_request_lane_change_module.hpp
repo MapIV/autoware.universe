@@ -152,8 +152,7 @@ private:
     }
 
     RCLCPP_WARN_STREAM(
-      getLogger(),
-      "Direction is UNKNOWN, start_distance = " << candidate.distance_to_path_change);
+      getLogger(), "Direction is UNKNOWN, start_distance = " << candidate.distance_to_path_change);
   }
 
   void removeRTCStatus() override

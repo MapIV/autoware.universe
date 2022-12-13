@@ -394,6 +394,10 @@ bool isSafeInFreeSpaceCollisionCheck(
 
 double calcTotalLaneChangeDistanceWithBuffer(const BehaviorPathPlannerParameters & common_param);
 
+bool checkPathRelativeAngle(const PathWithLaneId & path, const double angle_threshold);
+
+double calcTotalLaneChangeDistanceWithBuffer(const BehaviorPathPlannerParameters & common_param);
+
 double calcLaneChangeBuffer(
   const BehaviorPathPlannerParameters & common_param, const int num_lane_change,
   const double length_to_intersection);

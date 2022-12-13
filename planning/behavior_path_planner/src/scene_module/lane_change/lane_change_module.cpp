@@ -164,9 +164,15 @@ BehaviorModuleOutput LaneChangeModule::plan()
 
   BehaviorModuleOutput output;
   output.path = std::make_shared<PathWithLaneId>(path);
-  updateOutputTurnSignal(output);
+  const auto turn_signal_info_tmp = util::getPathTurnSignal(
+    status_.current_lanes, status_.lane_change_path.shifted_path,
+    status_.lane_change_path.shift_point, getEgoPose(), getEgoTwist().linear.x,
+    planner_data_->parameters);
+  output.turn_signal_info.turn_signal.command = turn_signal_info_tmp.first.command;
+  output.turn_signal_info.signal_distance = turn_signal_info_tmp.second;
 
   const auto turn_signal_info = output.turn_signal_info;
+
   if (turn_signal_info.turn_signal.command == TurnIndicatorsCommand::ENABLE_LEFT) {
     waitApprovalLeft(turn_signal_info.signal_distance);
   } else if (turn_signal_info.turn_signal.command == TurnIndicatorsCommand::ENABLE_RIGHT) {
@@ -263,6 +269,19 @@ BehaviorModuleOutput LaneChangeModule::planWaitingApproval()
 
   const auto candidate = planCandidate();
   out.path_candidate = std::make_shared<PathWithLaneId>(candidate.path_candidate);
+
+  if (isRequireTurnSignalWithoutApproval(prev_approved_path_)) {
+    const auto direction = getLaneChangeDirection(status_.lane_change_path);
+    if (direction == LaneChangeDirection::LEFT) {
+      out.turn_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_LEFT;
+    }
+    if (direction == LaneChangeDirection::RIGHT) {
+      out.turn_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
+    }
+    if (direction == LaneChangeDirection::NONE) {
+      out.turn_signal_info.turn_signal.command = TurnIndicatorsCommand::NO_COMMAND;
+    }
+  }
 
   updateRTCStatus(candidate);
   waitApproval();
@@ -439,6 +458,18 @@ bool LaneChangeModule::isNearEndOfLane() const
          threshold;
 }
 
+bool LaneChangeModule::isRequireTurnSignalWithoutApproval(const PathWithLaneId & path) const
+{
+  const auto & current_pose = getEgoPose();
+  const auto ego_speed = util::l2Norm(getEgoTwist().linear);
+  const double threshold = ego_speed * 3.0;
+  const double distance_to_end_of_lane = motion_utils::calcSignedArcLength(
+    path.points, current_pose.position, path.points.back().point.pose.position);
+  // std::max(0.0, util::getDistanceToEndOfLane(current_pose, status_.current_lanes));
+
+  return (distance_to_end_of_lane < threshold) || (distance_to_end_of_lane <= 30.0);
+}
+
 bool LaneChangeModule::isCurrentSpeedLow() const
 {
   const auto & current_twist = planner_data_->self_odometry->twist.twist;
@@ -448,27 +479,24 @@ bool LaneChangeModule::isCurrentSpeedLow() const
 
 bool LaneChangeModule::isAbortConditionSatisfied()
 {
-  const auto & common_parameters = planner_data_->parameters;
   is_abort_condition_satisfied_ = false;
+  current_lane_change_state_ = LaneChangeStates::Normal;
 
-  // check cancel enable flag
   if (!parameters_->enable_cancel_lane_change) {
-    current_lane_change_state_ = LaneChangeStates::Normal;
     return false;
   }
 
   if (!is_activated_) {
-    current_lane_change_state_ = LaneChangeStates::Normal;
     return false;
   }
 
-  // check if lane change path is still safe
   Pose ego_pose_before_collision;
   const auto is_path_safe = isApprovedPathSafe(ego_pose_before_collision);
 
   if (!is_path_safe) {
     current_lane_change_state_ = LaneChangeStates::Cancel;
 
+    const auto & common_parameters = planner_data_->parameters;
     const bool is_within_original_lane = lane_change_utils::isEgoWithinOriginalLane(
       status_.current_lanes, getEgoPose(), common_parameters);
 
@@ -477,31 +505,29 @@ bool LaneChangeModule::isAbortConditionSatisfied()
     }
 
     // check abort enable flag
+    RCLCPP_WARN_STREAM_THROTTLE(
+      getLogger(), *clock_, 1000,
+      "DANGER!!! Path is not safe anymore, but it is too late to CANCEL! Please be cautious");
+
     if (!parameters_->enable_abort_lane_change) {
+      current_lane_change_state_ = LaneChangeStates::Stop;
       return true;
     }
-
-    auto clock{rclcpp::Clock{RCL_ROS_TIME}};
-    RCLCPP_WARN_STREAM_THROTTLE(
-      getLogger(), clock, 1000,
-      "DANGER!!! Path is not safe anymore, but it is too late to abort! Please be cautious");
-
-    current_lane_change_state_ = LaneChangeStates::Abort;
 
     const auto found_abort_path = lane_change_utils::getAbortPaths(
       planner_data_, status_.lane_change_path, ego_pose_before_collision, common_parameters,
       *parameters_);
 
-    abort_non_collision_pose_ = ego_pose_before_collision;
-
-    if (found_abort_path) {
-      if (!is_abort_path_approved_) {
-        abort_path_ = std::make_shared<LaneChangePath>(*found_abort_path);
-      }
+    if (!found_abort_path && !is_abort_path_approved_) {
+      current_lane_change_state_ = LaneChangeStates::Stop;
       return true;
     }
 
-    current_lane_change_state_ = LaneChangeStates::Stop;
+    current_lane_change_state_ = LaneChangeStates::Abort;
+
+    if (!is_abort_path_approved_) {
+      abort_path_ = std::make_shared<LaneChangePath>(*found_abort_path);
+    }
 
     return true;
   }
@@ -615,15 +641,6 @@ bool LaneChangeModule::isApprovedPathSafe(Pose & ego_pose_before_collision) cons
     false, status_.lane_change_path.acceleration);
 }
 
-void LaneChangeModule::updateOutputTurnSignal(BehaviorModuleOutput & output)
-{
-  const auto turn_signal_info = util::getPathTurnSignal(
-    status_.current_lanes, status_.lane_change_path.shifted_path,
-    status_.lane_change_path.shift_point, getEgoPose(), getEgoTwist().linear.x,
-    planner_data_->parameters);
-  output.turn_signal_info.turn_signal.command = turn_signal_info.first.command;
-}
-
 void LaneChangeModule::resetParameters()
 {
   is_abort_path_approved_ = false;
@@ -635,6 +652,20 @@ void LaneChangeModule::resetParameters()
   removeRTCStatus();
   object_debug_.clear();
   debug_marker_.markers.clear();
+}
+
+[[nodiscard]] LaneChangeDirection LaneChangeModule::getLaneChangeDirection(
+  const LaneChangePath & path)
+{
+  const auto lateral_shift = -lane_change_utils::getLateralShift(path);
+  constexpr double epsilon = 1.0e-5;
+  if (lateral_shift < -epsilon) {
+    return LaneChangeDirection::LEFT;
+  }
+  if (lateral_shift > epsilon) {
+    return LaneChangeDirection::RIGHT;
+  }
+  return LaneChangeDirection::NONE;
 }
 
 void LaneChangeModule::accept_visitor(const std::shared_ptr<SceneModuleVisitor> & visitor) const
