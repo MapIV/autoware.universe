@@ -232,6 +232,7 @@ void MPC::setReferenceTrajectory(
     auto extended_pose = autoware_traj.points.back().pose;
 
     constexpr double extend_dist = 10.0;
+    constexpr double extend_vel = 10.0;
     const double extend_interval = traj_resample_dist;
     const size_t num_extended_point = static_cast<size_t>(extend_dist / extend_interval);
     for (size_t i = 0; i < num_extended_point; ++i) {
