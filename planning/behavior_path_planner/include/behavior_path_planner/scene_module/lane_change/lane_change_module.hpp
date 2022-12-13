@@ -48,6 +48,7 @@ using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
 using lane_departure_checker::LaneDepartureChecker;
 using marker_utils::CollisionCheckDebug;
+using route_handler::LaneChangeDirection;
 using tier4_planning_msgs::msg::LaneChangeDebugMsg;
 using tier4_planning_msgs::msg::LaneChangeDebugMsgArray;
 
@@ -241,6 +242,9 @@ private:
   bool hasFinishedLaneChange() const;
   bool isStopState() const;
   bool isAbortState() const;
+  [[nodiscard]] static LaneChangeDirection getLaneChangeDirection(const LaneChangePath & path);
+
+  bool isRequireTurnSignalWithoutApproval(const PathWithLaneId & path) const;
 
   // getter
   Pose getEgoPose() const;
