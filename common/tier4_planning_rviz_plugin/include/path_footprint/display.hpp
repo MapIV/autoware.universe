@@ -67,6 +67,7 @@ protected:
   rviz_common::properties::FloatProperty * property_vehicle_length_;
   rviz_common::properties::FloatProperty * property_vehicle_width_;
   rviz_common::properties::FloatProperty * property_rear_overhang_;
+  rviz_common::properties::FloatProperty * property_offset_;
 
   struct VehicleFootprintInfo
   {
