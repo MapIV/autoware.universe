@@ -222,7 +222,7 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
       std::min(point.point.longitudinal_velocity_mps, static_cast<float>(pull_over_velocity));
 
     // add target lanes to points after shift start
-    if (path_shifter.getShiftLines().front().start_idx < i) {
+    if (path_shifter.getShiftPoints().front().start_idx < i) {
       // add road lane_ids if not found
       for (const auto id : shifted_path.path.points.back().lane_ids) {
         if (std::find(point.lane_ids.begin(), point.lane_ids.end(), id) == point.lane_ids.end()) {
