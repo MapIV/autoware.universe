@@ -79,9 +79,16 @@ void LaneChangeModule::onEntry()
 
 void LaneChangeModule::onExit()
 {
+<<<<<<< HEAD
   initParameters();
   resetParameters();
   publishPathCandidate();
+=======
+  clearWaitingApproval();
+  removeRTCStatus();
+  debug_marker_.markers.clear();
+  resetPathCandidate();
+>>>>>>> 603662b5a (feat(behavior_path_planner): get path candidate in behavior tree manager)
   current_state_ = BT::NodeStatus::SUCCESS;
   RCLCPP_DEBUG(getLogger(), "LANE_CHANGE onExit");
 }
@@ -144,6 +151,7 @@ BT::NodeStatus LaneChangeModule::updateState()
 
 BehaviorModuleOutput LaneChangeModule::plan()
 {
+  resetPathCandidate();
   constexpr double RESAMPLE_INTERVAL{1.0};
   auto path = util::resamplePathWithSpline(status_.lane_change_path.path, RESAMPLE_INTERVAL);
   // Generate drivable area
@@ -226,7 +234,7 @@ BehaviorModuleOutput LaneChangeModule::planWaitingApproval()
     }
   }
 
-  publishPathCandidate(candidate);
+  path_candidate_ = std::make_shared<PathWithLaneId>(candidate.path_candidate);
   updateRTCStatus(candidate);
   waitApproval();
   is_abort_path_approved_ = false;
