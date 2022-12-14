@@ -20,6 +20,7 @@
 #include "behavior_path_planner/util/create_vehicle_footprint.hpp"
 #include "behavior_path_planner/utilities.hpp"
 
+#include <lanelet2_extension/utility/message_conversion.hpp>
 #include <lanelet2_extension/utility/utilities.hpp>
 #include <motion_utils/motion_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -253,10 +254,31 @@ Pose PullOverModule::calcRefinedGoal() const
   lanelet::utils::query::getClosestLanelet(
     planner_data_->route_handler->getShoulderLanelets(), goal_pose, &closest_shoulder_lanelet);
 
-  auto center_pose = util::refineGoal(goal_pose, closest_shoulder_lanelet);
+  // calc closest center line pose
+  Pose center_pose;
+  {
+    // find position
+    const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(goal_pose.position);
+    const auto segment = lanelet::utils::getClosestSegment(
+      lanelet::utils::to2D(lanelet_point), closest_shoulder_lanelet.centerline());
+    const auto p1 = segment.front().basicPoint();
+    const auto p2 = segment.back().basicPoint();
+    const auto direction_vector = (p2 - p1).normalized();
+    const auto p1_to_goal = lanelet_point.basicPoint() - p1;
+    const double s = direction_vector.dot(p1_to_goal);
+    const auto refined_point = p1 + direction_vector * s;
 
-  // const Pose center_pose =
-  //   lanelet::utils::getClosestCenterPose(closest_shoulder_lanelet, goal_pose.position);
+    center_pose.position.x = refined_point.x();
+    center_pose.position.y = refined_point.y();
+    center_pose.position.z = refined_point.z();
+
+    // find orientation
+    const double yaw = std::atan2(direction_vector.y(), direction_vector.x());
+    tf2::Quaternion tf_quat;
+    tf_quat.setRPY(0, 0, yaw);
+    center_pose.orientation = tf2::toMsg(tf_quat);
+  }
+
   const double distance_from_left_bound = util::getSignedDistanceFromShoulderLeftBoundary(
     planner_data_->route_handler->getShoulderLanelets(), vehicle_footprint_, center_pose);
   const double offset_from_center_line =
