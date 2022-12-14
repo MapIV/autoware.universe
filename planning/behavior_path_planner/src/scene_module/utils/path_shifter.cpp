@@ -196,9 +196,9 @@ void PathShifter::applySplineShifter(ShiftedPath * shifted_path, const bool offs
     const auto [base_distance, base_length] =
       calcBaseLengths(shifting_arclength, delta_shift, offset_back);
 
-    RCLCPP_INFO(
-      logger_, "base_distance = %s, base_length = %s", toStr(base_distance).c_str(),
-      toStr(base_length).c_str());
+    // RCLCPP_INFO(
+    //   logger_, "base_distance = %s, base_length = %s", toStr(base_distance).c_str(),
+    //   toStr(base_length).c_str());
 
     std::vector<double> query_distance, query_length;
 
@@ -306,13 +306,13 @@ std::pair<std::vector<double>, std::vector<double>> PathShifter::calcBaseLengths
   std::vector<double> base_lat = {0.0, l1, l2, l3, l5, l6, l7};
   if (!offset_back) std::reverse(base_lat.begin(), base_lat.end());
 
-  RCLCPP_WARN(
-    logger_,
-    "arclength = %f, shift_length = %f, tj = %f, ta = %f, T = %f, jerk = %f, amax = %f, base_lon = "
-    "%s, "
-    "base_lat = %s",
-    arclength, shift_length, tj, ta, T, jerk, amax, toStr(base_lon).c_str(),
-    toStr(base_lat).c_str());
+  // RCLCPP_WARN(
+  //   logger_,
+  //   "arclength = %f, shift_length = %f, tj = %f, ta = %f, T = %f, jerk = %f, amax = %f, base_lon = "
+  //   "%s, "
+  //   "base_lat = %s",
+  //   arclength, shift_length, tj, ta, T, jerk, amax, toStr(base_lon).c_str(),
+  //   toStr(base_lat).c_str());
 
   return {base_lon, base_lat};
 }
