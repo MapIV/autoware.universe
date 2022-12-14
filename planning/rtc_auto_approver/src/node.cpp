@@ -28,10 +28,9 @@ RTCAutoApproverNode::RTCAutoApproverNode(const rclcpp::NodeOptions & node_option
     declare_parameter("default_enable_list", std::vector<std::string>());
 
   for (const auto & module_name : module_list) {
-    const std::string name_space = BEHAVIOR_PLANNING_NAMESPACE + "/" + module_name;
     const bool enabled =
       std::count(default_enable_list.begin(), default_enable_list.end(), module_name) != 0;
-    approvers_.push_back(std::make_shared<RTCAutoApproverInterface>(this, name_space, enabled));
+    approvers_.push_back(std::make_shared<RTCAutoApproverInterface>(this, module_name, enabled));
   }
 }
 
