@@ -428,7 +428,8 @@ BehaviorModuleOutput PullOverModule::plan()
         refined_goal_pose_, -parameters_.backward_goal_search_length, -arc_coordinates.distance, 0);
       first_path = util::setDecelerationVelocity(
         first_path, parameters_.pull_over_velocity, search_start_pose,
-        -calcMinimumShiftPathDistance(), parameters_.deceleration_interval);
+        15.0, parameters_.deceleration_interval);
+        // -calcMinimumShiftPathDistance(), parameters_.deceleration_interval);
     }
   }
 
@@ -584,7 +585,7 @@ PathWithLaneId PullOverModule::getReferencePath() const
   // slow down before the search area.
   reference_path = util::setDecelerationVelocity(
     reference_path, parameters_.pull_over_velocity, search_start_pose,
-    -calcMinimumShiftPathDistance(), parameters_.deceleration_interval);
+    -15.0, parameters_.deceleration_interval);
 
   const auto lanes = util::expandLanelets(
     status_.current_lanes, parameters_.drivable_area_left_bound_offset,
@@ -677,6 +678,7 @@ PathWithLaneId PullOverModule::getFullPath() const
   return path;
 }
 
+// todo: delete this func
 double PullOverModule::calcMinimumShiftPathDistance() const
 {
   const double maximum_jerk = parameters_.maximum_lateral_jerk;
@@ -699,6 +701,7 @@ double PullOverModule::calcMinimumShiftPathDistance() const
   return pull_over_total_distance_min;
 }
 
+// todo: delete this func
 bool PullOverModule::isLongEnough(
   const lanelet::ConstLanelets & lanelets, const Pose & goal_pose, const double buffer) const
 {
@@ -706,7 +709,8 @@ bool PullOverModule::isLongEnough(
   const double distance_to_goal =
     std::abs(util::getSignedDistance(current_pose, goal_pose, lanelets));
 
-  return distance_to_goal > calcMinimumShiftPathDistance() + buffer;
+  // return distance_to_goal > calcMinimumShiftPathDistance() + buffer;
+  return distance_to_goal > 15.0 + buffer;
 }
 
 bool PullOverModule::isStopped()
