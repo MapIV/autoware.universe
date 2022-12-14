@@ -641,8 +641,8 @@ PathWithLaneId::SharedPtr BehaviorPathPlannerNode::getPath(
     connected_path = modifyPathForSmoothGoalConnection(*path);
   }
 
-  const auto resampled_path = util::resamplePathWithSpline(*path, 2.0, true);
-  // util::resamplePathWithSpline(*path, planner_data_->parameters.path_interval, true);
+  const auto resampled_path = util::resamplePathWithSpline(connected_path, 2.0, true);
+
   return std::make_shared<PathWithLaneId>(resampled_path);
 }
 
