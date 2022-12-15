@@ -39,14 +39,14 @@ std::string toStr(const behavior_path_planner::ShiftPoint & p)
          ", start idx = " + std::to_string(p.start_idx) +
          ", end idx = " + std::to_string(p.end_idx) + ", length = " + std::to_string(p.length);
 }
-std::string toStr(const std::vector<double> & v)
-{
-  std::stringstream ss;
-  for (const auto & p : v) {
-    ss << p << ", ";
-  }
-  return ss.str();
-}
+// std::string toStr(const std::vector<double> & v)
+// {
+//   std::stringstream ss;
+//   for (const auto & p : v) {
+//     ss << p << ", ";
+//   }
+//   return ss.str();
+// }
 }  // namespace
 
 namespace behavior_path_planner
@@ -196,9 +196,9 @@ void PathShifter::applySplineShifter(ShiftedPath * shifted_path, const bool offs
     const auto [base_distance, base_length] =
       calcBaseLengths(shifting_arclength, delta_shift, offset_back);
 
-    RCLCPP_INFO(
-      logger_, "base_distance = %s, base_length = %s", toStr(base_distance).c_str(),
-      toStr(base_length).c_str());
+    // RCLCPP_INFO(
+    //   logger_, "base_distance = %s, base_length = %s", toStr(base_distance).c_str(),
+    //   toStr(base_length).c_str());
 
     std::vector<double> query_distance, query_length;
 
@@ -306,13 +306,14 @@ std::pair<std::vector<double>, std::vector<double>> PathShifter::calcBaseLengths
   std::vector<double> base_lat = {0.0, l1, l2, l3, l5, l6, l7};
   if (!offset_back) std::reverse(base_lat.begin(), base_lat.end());
 
-  RCLCPP_WARN(
-    logger_,
-    "arclength = %f, shift_length = %f, tj = %f, ta = %f, T = %f, jerk = %f, amax = %f, base_lon = "
-    "%s, "
-    "base_lat = %s",
-    arclength, shift_length, tj, ta, T, jerk, amax, toStr(base_lon).c_str(),
-    toStr(base_lat).c_str());
+  // RCLCPP_WARN(
+  //   logger_,
+  //   "arclength = %f, shift_length = %f, tj = %f, ta = %f, T = %f, jerk = %f, amax = %f, base_lon
+  //   = "
+  //   "%s, "
+  //   "base_lat = %s",
+  //   arclength, shift_length, tj, ta, T, jerk, amax, toStr(base_lon).c_str(),
+  //   toStr(base_lat).c_str());
 
   return {base_lon, base_lat};
 }
@@ -554,6 +555,67 @@ double PathShifter::calcShiftTimeFromJerkAndJerk(
 
   const double t_total = 4.0 * tj + 2.0 * ta;
   return t_total;
+}
+
+double PathShifter::calcLongitudinalDistFromJerk(
+  const double lateral, const double jerk, const double velocity)
+{
+  const double j = std::abs(jerk);
+  const double l = std::abs(lateral);
+  const double v = std::abs(velocity);
+  if (j < 1.0e-8) {
+    return 1.0e10;  // TODO(Horibe) maybe invalid arg?
+  }
+  return 4.0 * std::pow(0.5 * l / j, 1.0 / 3.0) * v;
+}
+
+double PathShifter::calcJerkFromLatLonDistance(
+  const double lateral, const double longitudinal, const double velocity)
+{
+  constexpr double ep = 1.0e-3;
+  const double lat = std::abs(lateral);
+  const double lon = std::max(std::abs(longitudinal), ep);
+  const double v = std::abs(velocity);
+  return 0.5 * lat * std::pow(4.0 * v / lon, 3);
+}
+
+double PathShifter::getTotalShiftLength() const
+{
+  double sum = base_offset_;
+  for (const auto & p : shift_points_) {
+    sum += p.length;
+  }
+  return sum;
+}
+
+double PathShifter::getLastShiftLength() const
+{
+  if (shift_points_.empty()) {
+    return base_offset_;
+  }
+
+  // TODO(Horibe) enable this with const
+  // if (!is_index_aligned_) {
+  //   updateShiftPointIndices();
+  // }
+  const auto furthest = std::max_element(
+    shift_points_.begin(), shift_points_.end(),
+    [](auto & a, auto & b) { return a.end_idx < b.end_idx; });
+
+  return furthest->length;
+}
+
+boost::optional<ShiftPoint> PathShifter::getLastShiftPoint() const
+{
+  if (shift_points_.empty()) {
+    return {};
+  }
+
+  const auto furthest = std::max_element(
+    shift_points_.begin(), shift_points_.end(),
+    [](auto & a, auto & b) { return a.end_idx > b.end_idx; });
+
+  return *furthest;
 }
 
 }  // namespace behavior_path_planner

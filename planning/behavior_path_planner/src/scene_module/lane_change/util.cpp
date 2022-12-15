@@ -521,7 +521,8 @@ PathWithLaneId getReferencePathFromTargetLane(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & target_lanes,
   const Pose & lane_changing_start_pose, const double & prepare_distance,
   const double & lane_changing_distance, const double & forward_path_length,
-  const int & num_to_preferred_lane, const double & minimum_lane_change_length, const double & lane_changing_speed)
+  const int & num_to_preferred_lane, const double & minimum_lane_change_length,
+  const double & lane_changing_speed)
 {
   const ArcCoordinates lane_change_start_arc_position =
     lanelet::utils::getArcCoordinates(target_lanes, lane_changing_start_pose);
@@ -530,7 +531,9 @@ PathWithLaneId getReferencePathFromTargetLane(
     static_cast<double>(num_to_preferred_lane) * minimum_lane_change_length;
   const double & s_start = lane_change_start_arc_position.length;
   double s_end = s_start;
-  const double distance_to_deadend = util::getDistanceToEndOfLane(lane_changing_start_pose, target_lanes) - total_minimum_lane_change_length;
+  const double distance_to_deadend =
+    util::getDistanceToEndOfLane(lane_changing_start_pose, target_lanes) -
+    total_minimum_lane_change_length;
 
   if (num_to_preferred_lane == 0) {
     s_end += prepare_distance + lane_changing_distance + forward_path_length;
@@ -806,7 +809,7 @@ std::optional<LaneChangePath> getAbortPaths(
   if (!path_shifter.generate(&shifted_path)) {
     RCLCPP_ERROR_STREAM(
       rclcpp::get_logger("behavior_path_planner").get_child("lane_change").get_child("util"),
-      "failed to generate shifted path.");
+      "failed to generate abort shifted path.");
   }
 
   PathWithLaneId start_to_abort_end_pose;
