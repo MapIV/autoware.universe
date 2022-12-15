@@ -96,9 +96,6 @@ std::pair<double, double> calcLaneChangingSpeedAndDistanceWhenDecelerate(
   const auto lane_changing_distance =
     std::max(lane_changing_average_speed * required_time, minimum_lane_change_length);
 
-  std::cerr << "lane change dist calc: required_time = " << required_time
-            << ", lane_changing_average_speed = " << lane_changing_average_speed
-            << ", shift_length = " << shift_length << ", decel: " << acceleration << std::endl;
   return {lane_changing_average_speed, lane_changing_distance};
 }
 
