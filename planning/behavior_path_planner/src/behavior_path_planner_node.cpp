@@ -220,6 +220,9 @@ BehaviorPathPlannerParameters BehaviorPathPlannerNode::getCommonParam()
   p.backward_length_buffer_for_end_of_pull_out =
     declare_parameter("backward_length_buffer_for_end_of_pull_out", 5.0);
   p.minimum_lane_change_length = declare_parameter("minimum_lane_change_length", 8.0);
+  p.minimum_lane_change_prepare_distance =
+    declare_parameter("minimum_lane_change_prepare_distance", 2.0);
+
   p.minimum_pull_over_length = declare_parameter("minimum_pull_over_length", 15.0);
   p.drivable_area_resolution = declare_parameter<double>("drivable_area_resolution");
   p.drivable_lane_forward_length = declare_parameter<double>("drivable_lane_forward_length");
@@ -370,26 +373,11 @@ LaneChangeParameters BehaviorPathPlannerNode::getLaneChangeParam()
   p.use_all_predicted_path = dp("use_all_predicted_path", true);
 
   // abort
-  p.enable_cancel_lane_change = dp("enable_cancel_lane_change", true);
+  p.enable_cancel_lane_change = dp("enable_cancel_lane_change", false);
   p.enable_abort_lane_change = dp("enable_abort_lane_change", false);
 
-  p.abort_lane_change_velocity_thresh = dp("abort_lane_change_velocity_thresh", 0.5);
-  p.abort_lane_change_angle_thresh =
-    dp("abort_lane_change_angle_thresh", tier4_autoware_utils::deg2rad(10.0));
-  p.abort_lane_change_distance_thresh = dp("abort_lane_change_distance_thresh", 0.3);
-
-  p.abort_begin_min_longitudinal_thresh = dp("abort_begin_min_longitudinal_thresh", 4.0);
-  p.abort_begin_max_longitudinal_thresh = dp("abort_begin_max_longitudinal_thresh", 6.0);
-  p.abort_begin_duration = dp("abort_begin_duration", 3.0);
-
-  p.abort_return_min_longitudinal_thresh = dp("abort_return_min_longitudinal_thresh", 12.0);
-  p.abort_return_max_longitudinal_thresh = dp("abort_return_max_longitudinal_thresh", 16.0);
-  p.abort_return_duration = dp("abort_return_duration", 6.0);
-
-  p.abort_expected_deceleration = dp("abort_expected_deceleration", 0.1);
-  p.abort_longitudinal_jerk = dp("abort_longitudinal_jerk", 0.5);
-
-  p.abort_max_lateral_jerk = dp("abort_max_lateral_jerk", 5.0);
+  p.abort_delta_time = dp("abort_delta_time", 3.0);
+  p.abort_max_lateral_jerk = dp("abort_max_lateral_jerk", 10.0);
 
   p.publish_debug_marker = dp("publish_debug_marker", false);
 

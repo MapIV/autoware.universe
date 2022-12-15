@@ -114,15 +114,11 @@ BT::NodeStatus LaneChangeModule::updateState()
 {
   RCLCPP_DEBUG(getLogger(), "LANE_CHANGE updateState");
   if (isAbortConditionSatisfied()) {
-    if (isNearEndOfLane() && isCurrentSpeedLow()) {
+    if ((isNearEndOfLane() && isCurrentSpeedLow()) || isAbortState() || isStopState()) {
       current_state_ = BT::NodeStatus::RUNNING;
       return current_state_;
     }
 
-    if (current_lane_change_state_ == LaneChangeStates::Abort && abort_path_) {
-      current_state_ = BT::NodeStatus::RUNNING;
-      return current_state_;
-    }
     current_state_ = BT::NodeStatus::FAILURE;
     return current_state_;
   }
@@ -141,16 +137,12 @@ BehaviorModuleOutput LaneChangeModule::plan()
 {
   resetPathCandidate();
   is_activated_ = isActivated();
-  constexpr double resample_interval{1.0};
 
-  RCLCPP_INFO(
-    getLogger(), "[plan] current_lane_change_state_ = %s",
-    toStr(current_lane_change_state_).data());
   PathWithLaneId selected_path = status_.lane_change_path.path;
   PathWithLaneId path;
 
   if (!isAbortState()) {
-    path = util::resamplePathWithSpline(selected_path, resample_interval);
+    path = selected_path;
     generateExtendedDrivableArea(path);
     prev_approved_path_ = path;
     if (
@@ -160,7 +152,7 @@ BehaviorModuleOutput LaneChangeModule::plan()
     }
   } else {
     resetPathIfAbort(selected_path);
-    path = util::resamplePathWithSpline(selected_path, resample_interval);
+    path = selected_path;
     generateExtendedDrivableArea(path);
   }
 
@@ -344,12 +336,11 @@ PathWithLaneId LaneChangeModule::getReferencePath() const
       *route_handler, current_lanes, current_pose, common_parameters.backward_path_length,
       common_parameters.forward_path_length, common_parameters, optional_lengths);
   }
-  const double & buffer =
-    common_parameters.backward_length_buffer_for_end_of_lane;  // buffer for min_lane_change_length
+
   const int num_lane_change =
     std::abs(route_handler->getNumLaneToPreferredLane(current_lanes.back()));
   const double lane_change_buffer =
-    num_lane_change * (common_parameters.minimum_lane_change_length + buffer);
+    util::calcLaneChangeBuffer(common_parameters, num_lane_change, optional_lengths);
 
   reference_path = util::setDecelerationVelocity(
     *route_handler, reference_path, current_lanes, parameters_->lane_change_prepare_duration,
@@ -457,9 +448,7 @@ bool LaneChangeModule::isSafe() const { return status_.is_safe; }
 bool LaneChangeModule::isNearEndOfLane() const
 {
   const auto & current_pose = getEgoPose();
-  const auto minimum_lane_change_length = planner_data_->parameters.minimum_lane_change_length;
-  const auto end_of_lane_buffer = planner_data_->parameters.backward_length_buffer_for_end_of_lane;
-  const double threshold = end_of_lane_buffer + minimum_lane_change_length;
+  const double threshold = util::calcTotalLaneChangeDistanceWithBuffer(planner_data_->parameters);
 
   return std::max(0.0, util::getDistanceToEndOfLane(current_pose, status_.current_lanes)) <
          threshold;

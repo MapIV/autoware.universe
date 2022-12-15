@@ -1705,13 +1705,11 @@ PathWithLaneId getCenterLinePath(
   const double s_backward = std::max(0., s - backward_path_length);
   double s_forward = s + forward_path_length;
 
-  const double buffer = parameter.backward_length_buffer_for_end_of_lane +
-                        optional_length;  // buffer for min_lane_change_length
   const int num_lane_change =
     std::abs(route_handler.getNumLaneToPreferredLane(lanelet_sequence.back()));
   const double lane_length = lanelet::utils::getLaneletLength2d(lanelet_sequence);
   const double lane_change_buffer =
-    num_lane_change * (parameter.minimum_lane_change_length + buffer);
+    calcLaneChangeBuffer(parameter, std::abs(num_lane_change), optional_length);
 
   if (route_handler.isDeadEndLanelet(lanelet_sequence.back())) {
     s_forward = std::min(s_forward, lane_length - lane_change_buffer);
@@ -1817,7 +1815,7 @@ PathWithLaneId setDecelerationVelocity(
       const double lane_length = lanelet::utils::getLaneletLength2d(lanelet_sequence);
       const auto arclength = lanelet::utils::getArcCoordinates(lanelet_sequence, point.point.pose);
       const double distance_to_end =
-        std::max(0.0, lane_length - lane_change_buffer - arclength.length);
+        std::max(0.0, lane_length - std::abs(lane_change_buffer) - arclength.length);
       point.point.longitudinal_velocity_mps = std::min(
         point.point.longitudinal_velocity_mps,
         static_cast<float>(distance_to_end / lane_change_prepare_duration));
@@ -2411,4 +2409,64 @@ bool isSafeInFreeSpaceCollisionCheck(
   return true;
 }
 
+bool checkPathRelativeAngle(const PathWithLaneId & path, const double angle_threshold)
+{
+  // We need at least three points to compute relative angle
+  constexpr size_t relative_angle_points_num = 3;
+  if (path.points.size() < relative_angle_points_num) {
+    return true;
+  }
+
+  for (size_t p1_id = 0; p1_id <= path.points.size() - relative_angle_points_num; ++p1_id) {
+    // Get Point1
+    const auto & p1 = path.points.at(p1_id).point.pose.position;
+
+    // Get Point2
+    const auto & p2 = path.points.at(p1_id + 1).point.pose.position;
+
+    // Get Point3
+    const auto & p3 = path.points.at(p1_id + 2).point.pose.position;
+
+    // ignore invert driving direction
+    if (
+      path.points.at(p1_id).point.longitudinal_velocity_mps < 0 ||
+      path.points.at(p1_id + 1).point.longitudinal_velocity_mps < 0 ||
+      path.points.at(p1_id + 2).point.longitudinal_velocity_mps < 0) {
+      continue;
+    }
+
+    // convert to p1 coordinate
+    const double x3 = p3.x - p1.x;
+    const double x2 = p2.x - p1.x;
+    const double y3 = p3.y - p1.y;
+    const double y2 = p2.y - p1.y;
+
+    // calculate relative angle of vector p3 based on p1p2 vector
+    const double th = std::atan2(y2, x2);
+    const double th2 =
+      std::atan2(-x3 * std::sin(th) + y3 * std::cos(th), x3 * std::cos(th) + y3 * std::sin(th));
+    if (std::abs(th2) > angle_threshold) {
+      // invalid angle
+      return false;
+    }
+  }
+
+  return true;
+}
+
+double calcTotalLaneChangeDistanceWithBuffer(const BehaviorPathPlannerParameters & common_param)
+{
+  const double minimum_lane_change_distance =
+    common_param.minimum_lane_change_prepare_distance + common_param.minimum_lane_change_length;
+  const double end_of_lane_buffer = common_param.backward_length_buffer_for_end_of_lane;
+  return minimum_lane_change_distance + end_of_lane_buffer;
+}
+
+double calcLaneChangeBuffer(
+  const BehaviorPathPlannerParameters & common_param, const int num_lane_change,
+  const double length_to_intersection)
+{
+  return num_lane_change * calcTotalLaneChangeDistanceWithBuffer(common_param) +
+         length_to_intersection;
+}
 }  // namespace behavior_path_planner::util
