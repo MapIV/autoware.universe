@@ -114,7 +114,7 @@ BT::NodeStatus LaneChangeModule::updateState()
 {
   RCLCPP_DEBUG(getLogger(), "LANE_CHANGE updateState");
   if (isAbortConditionSatisfied()) {
-    if ((isNearEndOfLane() && isCurrentSpeedLow()) || isAbortState() || isStopState()) {
+    if ((isNearEndOfLane() && isCurrentSpeedLow()) || isAbortState()) {
       current_state_ = BT::NodeStatus::RUNNING;
       return current_state_;
     }
@@ -145,9 +145,7 @@ BehaviorModuleOutput LaneChangeModule::plan()
     path = selected_path;
     generateExtendedDrivableArea(path);
     prev_approved_path_ = path;
-    if (
-      (is_abort_condition_satisfied_ && isNearEndOfLane() && isCurrentSpeedLow()) ||
-      isStopState()) {
+    if ((is_abort_condition_satisfied_ && isNearEndOfLane() && isCurrentSpeedLow())) {
       const auto stop_point = util::insertStopPoint(0.1, &path);
     }
   } else {

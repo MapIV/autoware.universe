@@ -249,6 +249,11 @@ BehaviorPathPlannerParameters BehaviorPathPlannerNode::getCommonParam()
     declare_parameter("expected_front_deceleration_for_abort", -2.0);
   p.expected_rear_deceleration_for_abort =
     declare_parameter("expected_rear_deceleration_for_abort", -2.5);
+  // p.lane_changing_duration = declare_parameter("lane_change.lane_changing_duration", 8.0);
+  // p.minimum_lane_change_velocity =
+  // declare_parameter("lane_change.minimum_lane_change_velocity", 2.777);
+  // p.lane_change_prepare_duration =
+  // declare_parameter("lane_change.lane_change_prepare_duration", 8.0);
 
   p.rear_vehicle_safety_time_margin = declare_parameter("rear_vehicle_safety_time_margin", 2.0);
   return p;

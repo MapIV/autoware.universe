@@ -2459,7 +2459,14 @@ double calcTotalLaneChangeDistanceWithBuffer(const BehaviorPathPlannerParameters
   const double minimum_lane_change_distance =
     common_param.minimum_lane_change_prepare_distance + common_param.minimum_lane_change_length;
   const double end_of_lane_buffer = common_param.backward_length_buffer_for_end_of_lane;
-  return minimum_lane_change_distance + end_of_lane_buffer;
+
+  const double minimum_lane_change_velocity = common_param.minimum_lane_change_velocity;
+  const double lane_changing_duration = common_param.lane_changing_duration;
+  const double lane_change_prepare_duration = common_param.lane_change_prepare_duration;
+  const double min_vel_distance =
+    minimum_lane_change_velocity * (lane_changing_duration + lane_change_prepare_duration);
+
+  return std::max(min_vel_distance, minimum_lane_change_distance) + end_of_lane_buffer;
 }
 
 double calcLaneChangeBuffer(
