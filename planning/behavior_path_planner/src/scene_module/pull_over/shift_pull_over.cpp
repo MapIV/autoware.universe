@@ -212,7 +212,13 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   }
 
   // check collision
-  if (!isSafePath(shifted_path.path)) return {};
+  PathWithLaneId collision_check_path = shifted_path.path;
+  collision_check_path.points.clear();
+  std::copy(
+    shifted_path.path.points.begin() + path_shifter.getShiftPoints().front().start_idx,
+    shifted_path.path.points.end(), std::back_inserter(collision_check_path.points));
+
+  if (!isSafePath(collision_check_path)) return {};
 
   // set lane_id and velocity to shifted_path
   for (size_t i = 0; i < shifted_path.path.points.size() - 1; ++i) {
