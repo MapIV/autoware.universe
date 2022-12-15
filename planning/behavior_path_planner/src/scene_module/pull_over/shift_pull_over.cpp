@@ -221,27 +221,25 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   if (!isSafePath(collision_check_path)) return {};
 
   // set lane_id and velocity to shifted_path
-  for (size_t i = 0; i < shifted_path.path.points.size() - 1; ++i) {
+  for (size_t i = path_shifter.getShiftPoints().front().start_idx;
+       i < shifted_path.path.points.size() - 1; ++i) {
     auto & point = shifted_path.path.points.at(i);
     // set velocity
     point.point.longitudinal_velocity_mps =
       std::min(point.point.longitudinal_velocity_mps, static_cast<float>(pull_over_velocity));
 
     // add target lanes to points after shift start
-    if (path_shifter.getShiftPoints().front().start_idx < i) {
-      // add road lane_ids if not found
-      for (const auto id : shifted_path.path.points.back().lane_ids) {
-        if (std::find(point.lane_ids.begin(), point.lane_ids.end(), id) == point.lane_ids.end()) {
-          point.lane_ids.push_back(id);
-        }
+    for (const auto id : shifted_path.path.points.back().lane_ids) {
+      if (std::find(point.lane_ids.begin(), point.lane_ids.end(), id) == point.lane_ids.end()) {
+        point.lane_ids.push_back(id);
       }
-      // add shoulder lane_id if not found
-      for (const auto & lane : shoulder_lanes) {
-        if (
-          std::find(point.lane_ids.begin(), point.lane_ids.end(), lane.id()) ==
-          point.lane_ids.end()) {
-          point.lane_ids.push_back(lane.id());
-        }
+    }
+    // add shoulder lane_id if not found
+    for (const auto & lane : shoulder_lanes) {
+      if (
+        std::find(point.lane_ids.begin(), point.lane_ids.end(), lane.id()) ==
+        point.lane_ids.end()) {
+        point.lane_ids.push_back(lane.id());
       }
     }
   }
