@@ -58,7 +58,12 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
 
   // data_manager
   common_param_ptr_ = std::make_shared<BehaviorPathPlannerParameters>(getCommonParam());
+  lane_change_param_ptr = std::make_shared<LaneChangeParameters>(getLaneChangeParam());
   {
+    common_param_ptr_->minimum_lane_change_velocity =
+      lane_change_param_ptr->minimum_lane_change_velocity;
+    common_param_ptr_->lane_changing_duration =
+      lane_change_param_ptr->lane_changing_safety_check_duration;
     planner_data_ = std::make_shared<PlannerData>();
     planner_data_->parameters = std::ref(*common_param_ptr_);
   }
@@ -117,7 +122,6 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   route_subscriber_ = create_subscription<HADMapRoute>(
     "~/input/route", qos_transient_local, std::bind(&BehaviorPathPlannerNode::onRoute, this, _1),
     createSubscriptionOptions(this));
-  lane_change_param_ptr = std::make_shared<LaneChangeParameters>(getLaneChangeParam());
   m_set_param_res = this->add_on_set_parameters_callback(
     std::bind(&BehaviorPathPlannerNode::onSetParam, this, std::placeholders::_1));
 
@@ -359,7 +363,6 @@ LaneChangeParameters BehaviorPathPlannerNode::getLaneChangeParam()
   p.lane_changing_safety_check_duration = dp("lane_changing_safety_check_duration", 4.0);
   p.lane_changing_lateral_jerk = dp("lane_changing_lateral_jerk", 0.5);
   p.lane_changing_lateral_acc = dp("lane_changing_lateral_acc", 0.5);
-  p.minimum_lane_change_prepare_distance = dp("minimum_lane_change_prepare_distance", 4.0);
   p.lane_change_finish_judge_buffer = dp("lane_change_finish_judge_buffer", 3.0);
   p.minimum_lane_change_velocity = dp("minimum_lane_change_velocity", 5.6);
   p.prediction_time_resolution = dp("prediction_time_resolution", 0.5);
