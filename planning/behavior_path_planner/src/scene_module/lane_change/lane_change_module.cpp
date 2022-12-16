@@ -70,7 +70,7 @@ void LaneChangeModule::onEntry()
 void LaneChangeModule::onExit()
 {
   resetParameters();
-  current_state_ = BT::NodeStatus::IDLE;
+  current_state_ = BT::NodeStatus::SUCCESS;
   RCLCPP_DEBUG(getLogger(), "LANE_CHANGE onExit");
 }
 
