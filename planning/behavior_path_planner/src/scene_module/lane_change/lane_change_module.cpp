@@ -265,6 +265,20 @@ BehaviorModuleOutput LaneChangeModule::planWaitingApproval()
 
   const auto candidate = planCandidate();
   path_candidate_ = std::make_shared<PathWithLaneId>(candidate.path_candidate);
+
+  if (isRequireTurnSignalWithoutApproval(prev_approved_path_)) {
+    const auto direction = getLaneChangeDirection(status_.lane_change_path);
+    if (direction == LaneChangeDirection::LEFT) {
+      out.turn_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_LEFT;
+    }
+    if (direction == LaneChangeDirection::RIGHT) {
+      out.turn_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
+    }
+    if (direction == LaneChangeDirection::NONE) {
+      out.turn_signal_info.turn_signal.command = TurnIndicatorsCommand::NO_COMMAND;
+    }
+  }
+
   updateRTCStatus(candidate);
   waitApproval();
   is_abort_path_approved_ = false;
@@ -437,6 +451,18 @@ bool LaneChangeModule::isNearEndOfLane() const
 
   return std::max(0.0, util::getDistanceToEndOfLane(current_pose, status_.current_lanes)) <
          threshold;
+}
+
+bool LaneChangeModule::isRequireTurnSignalWithoutApproval(const PathWithLaneId & path) const
+{
+  const auto & current_pose = getEgoPose();
+  const auto ego_speed = util::l2Norm(getEgoTwist().linear);
+  const double threshold = ego_speed * 3.0;
+  const double distance_to_end_of_lane = motion_utils::calcSignedArcLength(
+    path.points, current_pose.position, path.points.back().point.pose.position);
+  // std::max(0.0, util::getDistanceToEndOfLane(current_pose, status_.current_lanes));
+
+  return (distance_to_end_of_lane < threshold) || (distance_to_end_of_lane <= 30.0);
 }
 
 bool LaneChangeModule::isCurrentSpeedLow() const
@@ -622,6 +648,7 @@ void LaneChangeModule::updateOutputTurnSignal(BehaviorModuleOutput & output)
     status_.lane_change_path.shift_point, getEgoPose(), getEgoTwist().linear.x,
     planner_data_->parameters);
   output.turn_signal_info.turn_signal.command = turn_signal_info.first.command;
+  output.turn_signal_info.signal_distance = turn_signal_info.second;
 }
 
 void LaneChangeModule::resetParameters()
@@ -635,6 +662,20 @@ void LaneChangeModule::resetParameters()
   removeRTCStatus();
   object_debug_.clear();
   debug_marker_.markers.clear();
+}
+
+[[nodiscard]] LaneChangeDirection LaneChangeModule::getLaneChangeDirection(
+  const LaneChangePath & path)
+{
+  const auto lateral_shift = -lane_change_utils::getLateralShift(path);
+  constexpr double epsilon = 1.0e-5;
+  if (lateral_shift < -epsilon) {
+    return LaneChangeDirection::LEFT;
+  }
+  if (lateral_shift > epsilon) {
+    return LaneChangeDirection::RIGHT;
+  }
+  return LaneChangeDirection::NONE;
 }
 
 void LaneChangeModule::accept_visitor(const std::shared_ptr<SceneModuleVisitor> & visitor) const
