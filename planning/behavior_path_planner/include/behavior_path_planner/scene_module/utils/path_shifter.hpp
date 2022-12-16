@@ -33,7 +33,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
 namespace behavior_path_planner
 {
 using autoware_auto_planning_msgs::msg::PathPointWithLaneId;
@@ -119,68 +118,19 @@ public:
   ////////////////////////////////////////
 
   static double calcLongitudinalDistFromJerk(
-    const double lateral, const double jerk, const double velocity)
-  {
-    const double j = std::abs(jerk);
-    const double l = std::abs(lateral);
-    const double v = std::abs(velocity);
-    if (j < 1.0e-8) {
-      return 1.0e10;  // TODO(Horibe) maybe invalid arg?
-    }
-    return 4.0 * std::pow(0.5 * l / j, 1.0 / 3.0) * v;
-  }
+    const double lateral, const double jerk, const double velocity);
 
   static double calcShiftTimeFromJerkAndJerk(
     const double lateral, const double jerk, const double acc);
 
   static double calcJerkFromLatLonDistance(
-    const double lateral, const double longitudinal, const double velocity)
-  {
-    constexpr double ep = 1.0e-3;
-    const double lat = std::abs(lateral);
-    const double lon = std::max(std::abs(longitudinal), ep);
-    const double v = std::abs(velocity);
-    return 0.5 * lat * std::pow(4.0 * v / lon, 3);
-  }
+    const double lateral, const double longitudinal, const double velocity);
 
-  double getTotalShiftLength() const
-  {
-    double sum = base_offset_;
-    for (const auto & p : shift_points_) {
-      sum += p.length;
-    }
-    return sum;
-  }
+  double getTotalShiftLength() const;
 
-  double getLastShiftLength() const
-  {
-    if (shift_points_.empty()) {
-      return base_offset_;
-    }
+  double getLastShiftLength() const;
 
-    // TODO(Horibe) enable this with const
-    // if (!is_index_aligned_) {
-    //   updateShiftPointIndices();
-    // }
-    const auto furthest = std::max_element(
-      shift_points_.begin(), shift_points_.end(),
-      [](auto & a, auto & b) { return a.end_idx < b.end_idx; });
-
-    return furthest->length;
-  }
-
-  boost::optional<ShiftPoint> getLastShiftPoint() const
-  {
-    if (shift_points_.empty()) {
-      return {};
-    }
-
-    const auto furthest = std::max_element(
-      shift_points_.begin(), shift_points_.end(),
-      [](auto & a, auto & b) { return a.end_idx > b.end_idx; });
-
-    return *furthest;
-  }
+  boost::optional<ShiftPoint> getLastShiftPoint() const;
 
   /**
    * @brief  Calculate the theoretical lateral jerk by spline shifting for current shift_lines_.
