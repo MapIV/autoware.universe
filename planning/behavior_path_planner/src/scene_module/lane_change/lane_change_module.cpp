@@ -71,7 +71,7 @@ void LaneChangeModule::onExit()
 {
   resetParameters();
   resetPathCandidate();
-  current_state_ = BT::NodeStatus::IDLE;
+  current_state_ = BT::NodeStatus::SUCCESS;
   RCLCPP_DEBUG(getLogger(), "LANE_CHANGE onExit");
 }
 
