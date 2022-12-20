@@ -97,10 +97,10 @@ bool PathShifter::generate(
     for (const auto & shift_point : shift_points_) {
       int idx_gap = shift_point.end_idx - shift_point.start_idx;
       if (idx_gap <= 1) {
-        RCLCPP_WARN_STREAM(
-          logger_,
-          "shift start point and end point can't be adjoining "
-          "Maybe shift length is too short?");
+        // RCLCPP_WARN_STREAM(
+        //   logger_,
+        //   "shift start point and end point can't be adjoining "
+        //   "Maybe shift length is too short?");
         return false;
       }
     }
@@ -276,10 +276,10 @@ std::pair<std::vector<double>, std::vector<double>> PathShifter::calcBaseLengths
 
   if (tj < 0.0 || ta < 0.0 || jerk < 0.0 || tj / T < 0.1) {
     // no need to consider acceleration limit
-    RCLCPP_WARN(
-      logger_,
-      "Acc limit is too small to be applied. Tj: %f, Ta: %f, j: %f, amax: %f, acc_limit: %f", tj,
-      ta, jerk, amax, acc_limit_);
+    // RCLCPP_WARN(
+    //   logger_,
+    //   "Acc limit is too small to be applied. Tj: %f, Ta: %f, j: %f, amax: %f, acc_limit: %f", tj,
+    //   ta, jerk, amax, acc_limit_);
     return getBaseLengthsWithoutAccelLimit(arclength, shift_length, offset_back);
   }
 

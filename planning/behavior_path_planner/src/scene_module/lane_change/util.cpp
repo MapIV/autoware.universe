@@ -121,9 +121,9 @@ std::optional<LaneChangePath> constructCandidatePath(
   path_shifter.setLateralAccelerationLimit(std::abs(params.lane_changing_lateral_acc));
 
   if (!path_shifter.generate(&shifted_path, offset_back)) {
-    RCLCPP_ERROR_STREAM(
-      rclcpp::get_logger("behavior_path_planner").get_child("lane_change").get_child("util"),
-      "failed to generate shifted path.");
+    // RCLCPP_ERROR_STREAM(
+    //   rclcpp::get_logger("behavior_path_planner").get_child("lane_change").get_child("util"),
+    //   "failed to generate shifted path.");
   }
 
   LaneChangePath candidate_path;
@@ -862,9 +862,9 @@ std::optional<LaneChangePath> getAbortPaths(
   // offset front side
   // bool offset_back = false;
   if (!path_shifter.generate(&shifted_path)) {
-    RCLCPP_ERROR_STREAM(
-      rclcpp::get_logger("behavior_path_planner").get_child("lane_change").get_child("util"),
-      "failed to generate shifted path.");
+    // RCLCPP_ERROR_STREAM(
+    //   rclcpp::get_logger("behavior_path_planner").get_child("lane_change").get_child("util"),
+    //   "failed to generate shifted path.");
   }
 
   PathWithLaneId start_to_abort_end_pose;
