@@ -164,7 +164,8 @@ private:
   double acc_limit_{-1.0};
 
   // Logger
-  mutable rclcpp::Logger logger_{rclcpp::get_logger("behavior_path_planner").get_child("path_shifter")};
+  mutable rclcpp::Logger logger_{
+    rclcpp::get_logger("behavior_path_planner").get_child("path_shifter")};
 
   std::pair<std::vector<double>, std::vector<double>> calcBaseLengths(
     const double arclength, const double shift_length, const bool offset_back) const;

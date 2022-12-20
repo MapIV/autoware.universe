@@ -441,9 +441,12 @@ bool ExternalRequestLaneChangeModule::isAbortConditionSatisfied() const
 
     std::unordered_map<std::string, CollisionCheckDebug> debug_data;
 
+    [[maybe_unused]] Pose ego_pose_before_collision;
     return lane_change_utils::isLaneChangePathSafe(
       path.path, current_lanes, check_lanes, dynamic_objects, current_pose, current_twist,
-      common_parameters, *parameters_, debug_data, false, status_.lane_change_path.acceleration);
+      common_parameters, *parameters_, common_parameters.expected_front_deceleration_for_abort,
+      common_parameters.expected_rear_deceleration_for_abort, ego_pose_before_collision, debug_data,
+      false, status_.lane_change_path.acceleration);
   });
 
   // abort only if velocity is low or vehicle pose is close enough
