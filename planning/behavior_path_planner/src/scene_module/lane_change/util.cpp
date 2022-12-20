@@ -103,9 +103,10 @@ std::optional<LaneChangePath> constructCandidatePath(
   const PathWithLaneId & prepare_segment, const PathWithLaneId & lane_changing_segment,
   const PathWithLaneId & target_lane_reference_path, const ShiftPoint & shift_point,
   const lanelet::ConstLanelets & original_lanelets, const lanelet::ConstLanelets & target_lanelets,
-  const double & acceleration, const double & prepare_distance, [[maybe_unused]] const double & prepare_duration,
-  [[maybe_unused]] const double & prepare_speed, const double & lane_change_distance,
-  const double & lane_changing_speed, const LaneChangeParameters & params)
+  const double & acceleration, const double & prepare_distance,
+  [[maybe_unused]] const double & prepare_duration, [[maybe_unused]] const double & prepare_speed,
+  const double & lane_change_distance, const double & lane_changing_speed,
+  const LaneChangeParameters & params)
 {
   PathShifter path_shifter;
   path_shifter.addShiftPoint(shift_point);
@@ -191,7 +192,7 @@ LaneChangePaths getLaneChangePaths(
   const auto & forward_path_length = common_parameter.forward_path_length;
   const auto & lane_change_prepare_duration = parameter.lane_change_prepare_duration;
   const auto & minimum_lane_change_prepare_distance =
-    parameter.minimum_lane_change_prepare_distance;
+    common_parameter.minimum_lane_change_prepare_distance;
   const auto & minimum_lane_change_length = common_parameter.minimum_lane_change_length;
   const auto & minimum_lane_change_velocity = parameter.minimum_lane_change_velocity;
   const auto & maximum_deceleration = parameter.maximum_deceleration;
@@ -518,7 +519,8 @@ PathWithLaneId getReferencePathFromTargetLane(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & target_lanes,
   const Pose & lane_changing_start_pose, const double prepare_distance,
   const double lane_changing_distance, const double forward_path_length,
-  const double lane_changing_speed, const int & num_to_preferred_lane, const double & minimum_lane_change_length)
+  const double lane_changing_speed, const int & num_to_preferred_lane,
+  const double & minimum_lane_change_length)
 {
   const ArcCoordinates lane_change_start_arc_position =
     lanelet::utils::getArcCoordinates(target_lanes, lane_changing_start_pose);
@@ -765,8 +767,7 @@ std::optional<LaneChangePath> getAbortPaths(
   }
 
   if (!hasEnoughDistanceToLaneChangeAfterAbort(
-        *route_handler, current_lanes, current_pose, abort_return_dist, common_param,
-        lane_change_param)) {
+        *route_handler, current_lanes, current_pose, abort_return_dist, common_param)) {
     return std::nullopt;
   }
 
@@ -833,10 +834,9 @@ double getLateralShift(const LaneChangePath & path)
 bool hasEnoughDistanceToLaneChangeAfterAbort(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & current_lanes,
   const Pose & current_pose, const double abort_return_dist,
-  const BehaviorPathPlannerParameters & common_param,
-  const LaneChangeParameters & lane_change_param)
+  const BehaviorPathPlannerParameters & common_param)
 {
-  const auto minimum_lane_change_distance = lane_change_param.minimum_lane_change_prepare_distance +
+  const auto minimum_lane_change_distance = common_param.minimum_lane_change_prepare_distance +
                                             common_param.minimum_lane_change_length +
                                             common_param.backward_length_buffer_for_end_of_lane;
   const auto abort_plus_lane_change_distance = abort_return_dist + minimum_lane_change_distance;

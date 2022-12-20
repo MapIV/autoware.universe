@@ -264,7 +264,7 @@ BehaviorModuleOutput LaneChangeModule::planWaitingApproval()
   }
 
   const auto candidate = planCandidate();
-  out.path_candidate = std::make_shared<PathWithLaneId>(candidate.path_candidate);
+  path_candidate_ = std::make_shared<PathWithLaneId>(candidate.path_candidate);
 
   if (isRequireTurnSignalWithoutApproval(prev_approved_path_)) {
     const auto direction = getLaneChangeDirection(status_.lane_change_path);
@@ -657,7 +657,6 @@ void LaneChangeModule::updateOutputTurnSignal(BehaviorModuleOutput & output)
     planner_data_->parameters);
   output.turn_signal_info.turn_signal.command = turn_signal_info.first.command;
   output.turn_signal_info.signal_distance = turn_signal_info.second;
-
 }
 
 void LaneChangeModule::resetParameters()

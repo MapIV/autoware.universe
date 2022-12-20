@@ -109,7 +109,8 @@ PathWithLaneId getReferencePathFromTargetLane(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & target_lanes,
   const Pose & lane_changing_start_pose, const double prepare_distance,
   const double lane_changing_distance, const double forward_path_length,
-  const double lane_changing_speed, const int & num_to_preferred_lane, const double & minimum_lane_change_length);
+  const double lane_changing_speed, const int & num_to_preferred_lane,
+  const double & minimum_lane_change_length);
 
 PathWithLaneId getReferencePathFromTargetLane(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & target_lanes,
@@ -150,8 +151,7 @@ double getLateralShift(const LaneChangePath & path);
 bool hasEnoughDistanceToLaneChangeAfterAbort(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & current_lanes,
   const Pose & curent_pose, const double abort_return_dist,
-  const BehaviorPathPlannerParameters & common_param,
-  const LaneChangeParameters & lane_change_param);
+  const BehaviorPathPlannerParameters & common_param);
 }  // namespace behavior_path_planner::lane_change_utils
 
 #endif  // BEHAVIOR_PATH_PLANNER__SCENE_MODULE__LANE_CHANGE__UTIL_HPP_
