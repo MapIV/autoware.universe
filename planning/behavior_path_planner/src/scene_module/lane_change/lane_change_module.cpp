@@ -141,16 +141,11 @@ BehaviorModuleOutput LaneChangeModule::plan()
 {
   resetPathCandidate();
   is_activated_ = isActivated();
-  // constexpr double resample_interval{1.0};
 
-  RCLCPP_INFO(
-    getLogger(), "[plan] current_lane_change_state_ = %s",
-    toStr(current_lane_change_state_).data());
   PathWithLaneId selected_path = status_.lane_change_path.path;
   PathWithLaneId path;
 
   if (!isAbortState()) {
-    // path = util::resamplePathWithSpline(selected_path, resample_interval);
     path = selected_path;
     generateExtendedDrivableArea(path);
     prev_approved_path_ = path;
@@ -161,7 +156,6 @@ BehaviorModuleOutput LaneChangeModule::plan()
     }
   } else {
     resetPathIfAbort(selected_path);
-    // path = util::resamplePathWithSpline(selected_path, resample_interval);
     path = selected_path;
     generateExtendedDrivableArea(path);
   }
@@ -218,20 +212,14 @@ CandidateOutput LaneChangeModule::planCandidate() const
 {
   CandidateOutput output;
 
-  // Get lane change lanes
+  LaneChangePath selected_path;
+    // Get lane change lanes
   const auto current_lanes = util::getCurrentLanes(planner_data_);
   const auto lane_change_lanes = getLaneChangeLanes(current_lanes, lane_change_lane_length_);
 
-  LaneChangePath selected_path;
-  if (current_lane_change_state_ != LaneChangeStates::Abort) {
-    // Get lane change lanes
-    const auto current_lanes = util::getCurrentLanes(planner_data_);
-    const auto lane_change_lanes = getLaneChangeLanes(current_lanes, lane_change_lane_length_);
-
-    [[maybe_unused]] const auto [found_valid_path, found_safe_path] =
-      getSafePath(lane_change_lanes, check_distance_, selected_path);
-    selected_path.path.header = planner_data_->route_handler->getRouteHeader();
-  }
+  [[maybe_unused]] const auto [found_valid_path, found_safe_path] =
+                     getSafePath(lane_change_lanes, check_distance_, selected_path);
+  selected_path.path.header = planner_data_->route_handler->getRouteHeader();
 
   if (isAbortState()) {
     selected_path = *abort_path_;

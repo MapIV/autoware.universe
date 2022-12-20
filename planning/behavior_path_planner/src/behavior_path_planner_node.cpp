@@ -218,14 +218,14 @@ BehaviorPathPlannerParameters BehaviorPathPlannerNode::getCommonParam()
   p.backward_path_length = declare_parameter("backward_path_length", 5.0) + backward_offset;
   p.forward_path_length = declare_parameter("forward_path_length", 100.0);
   p.backward_length_buffer_for_end_of_lane =
-    declare_parameter("backward_length_buffer_for_end_of_lane", 5.0);
+    declare_parameter("lane_change.backward_length_buffer_for_end_of_lane", 5.0);
   p.backward_length_buffer_for_end_of_pull_over =
     declare_parameter("backward_length_buffer_for_end_of_pull_over", 5.0);
   p.backward_length_buffer_for_end_of_pull_out =
     declare_parameter("backward_length_buffer_for_end_of_pull_out", 5.0);
-  p.minimum_lane_change_length = declare_parameter("minimum_lane_change_length", 8.0);
+  p.minimum_lane_change_length = declare_parameter("lane_change.minimum_lane_change_length", 8.0);
   p.minimum_lane_change_prepare_distance =
-    declare_parameter("minimum_lane_change_prepare_distance", 2.0);
+    declare_parameter("lane_change.minimum_lane_change_prepare_distance", 2.0);
 
   p.minimum_pull_over_length = declare_parameter("minimum_pull_over_length", 15.0);
   p.drivable_area_resolution = declare_parameter<double>("drivable_area_resolution");
