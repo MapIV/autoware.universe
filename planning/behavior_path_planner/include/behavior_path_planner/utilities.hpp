@@ -152,7 +152,42 @@ double getArcLengthToTargetLanelet(
 
 Pose lerpByPose(const Pose & p1, const Pose & p2, const double t);
 
-Point lerpByLength(const std::vector<Point> & array, const double length);
+inline Point lerpByPoint(const Point & p1, const Point & p2, const double t)
+{
+  tf2::Vector3 v1, v2;
+  v1.setValue(p1.x, p1.y, p1.z);
+  v2.setValue(p2.x, p2.y, p2.z);
+
+  const auto lerped_point = v1.lerp(v2, t);
+
+  Point point;
+  point.x = lerped_point.x();
+  point.y = lerped_point.y();
+  point.z = lerped_point.z();
+  return point;
+}
+
+template <class T>
+Point lerpByLength(const std::vector<T> & point_array, const double length)
+{
+  Point lerped_point;
+  if (point_array.empty()) {
+    return lerped_point;
+  }
+  Point prev_geom_pt = tier4_autoware_utils::getPoint(point_array.front());
+  double accumulated_length = 0;
+  for (const auto & pt : point_array) {
+    const auto & geom_pt = tier4_autoware_utils::getPoint(pt);
+    const double distance = tier4_autoware_utils::calcDistance3d(prev_geom_pt, geom_pt);
+    if (accumulated_length + distance > length) {
+      return lerpByPoint(prev_geom_pt, geom_pt, (length - accumulated_length) / distance);
+    }
+    accumulated_length += distance;
+    prev_geom_pt = geom_pt;
+  }
+
+  return tier4_autoware_utils::getPoint(point_array.back());
+}
 
 bool lerpByTimeStamp(const PredictedPath & path, const double t, Pose * lerped_pt);
 

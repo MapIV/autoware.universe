@@ -410,41 +410,6 @@ Pose lerpByPose(const Pose & p1, const Pose & p2, const double t)
   return pose;
 }
 
-Point lerpByPoint(const Point & p1, const Point & p2, const double t)
-{
-  tf2::Vector3 v1, v2;
-  v1.setValue(p1.x, p1.y, p1.z);
-  v2.setValue(p2.x, p2.y, p2.z);
-
-  const auto lerped_point = v1.lerp(v2, t);
-
-  Point point;
-  point.x = lerped_point.x();
-  point.y = lerped_point.y();
-  point.z = lerped_point.z();
-  return point;
-}
-
-Point lerpByLength(const std::vector<Point> & point_array, const double length)
-{
-  Point lerped_point;
-  if (point_array.empty()) {
-    return lerped_point;
-  }
-  Point prev_pt = point_array.front();
-  double accumulated_length = 0;
-  for (const auto & pt : point_array) {
-    const double distance = tier4_autoware_utils::calcDistance3d(prev_pt, pt);
-    if (accumulated_length + distance > length) {
-      return lerpByPoint(prev_pt, pt, (length - accumulated_length) / distance);
-    }
-    accumulated_length += distance;
-    prev_pt = pt;
-  }
-
-  return point_array.back();
-}
-
 bool lerpByDistance(
   const behavior_path_planner::PullOutPath & path, const double & s, Pose * lerped_pt,
   const lanelet::ConstLanelets & road_lanes)

@@ -39,14 +39,14 @@ std::string toStr(const behavior_path_planner::ShiftPoint & p)
          ", start idx = " + std::to_string(p.start_idx) +
          ", end idx = " + std::to_string(p.end_idx) + ", length = " + std::to_string(p.length);
 }
-std::string toStr(const std::vector<double> & v)
-{
-  std::stringstream ss;
-  for (const auto & p : v) {
-    ss << p << ", ";
-  }
-  return ss.str();
-}
+// std::string toStr(const std::vector<double> & v)
+// {
+//   std::stringstream ss;
+//   for (const auto & p : v) {
+//     ss << p << ", ";
+//   }
+//   return ss.str();
+// }
 }  // namespace
 
 namespace behavior_path_planner
@@ -196,9 +196,9 @@ void PathShifter::applySplineShifter(ShiftedPath * shifted_path, const bool offs
     const auto [base_distance, base_length] =
       calcBaseLengths(shifting_arclength, delta_shift, offset_back);
 
-    RCLCPP_INFO(
-      logger_, "base_distance = %s, base_length = %s", toStr(base_distance).c_str(),
-      toStr(base_length).c_str());
+    // RCLCPP_INFO(
+    //   logger_, "base_distance = %s, base_length = %s", toStr(base_distance).c_str(),
+    //   toStr(base_length).c_str());
 
     std::vector<double> query_distance, query_length;
 
@@ -266,7 +266,7 @@ std::pair<std::vector<double>, std::vector<double>> PathShifter::calcBaseLengths
 
   if (amax < acc_limit_) {
     // no need to consider acceleration limit
-    RCLCPP_INFO(logger_, "No need to consider acc limit. max: %f, limit: %f", amax, acc_limit_);
+    // RCLCPP_INFO(logger_, "No need to consider acc limit. max: %f, limit: %f", amax, acc_limit_);
     return getBaseLengthsWithoutAccelLimit(arclength, shift_length, offset_back);
   }
 

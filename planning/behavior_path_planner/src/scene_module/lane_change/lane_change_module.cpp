@@ -141,7 +141,7 @@ BehaviorModuleOutput LaneChangeModule::plan()
 {
   resetPathCandidate();
   is_activated_ = isActivated();
-  constexpr double resample_interval{1.0};
+  // constexpr double resample_interval{1.0};
 
   RCLCPP_INFO(
     getLogger(), "[plan] current_lane_change_state_ = %s",
@@ -150,7 +150,8 @@ BehaviorModuleOutput LaneChangeModule::plan()
   PathWithLaneId path;
 
   if (!isAbortState()) {
-    path = util::resamplePathWithSpline(selected_path, resample_interval);
+    // path = util::resamplePathWithSpline(selected_path, resample_interval);
+    path = selected_path;
     generateExtendedDrivableArea(path);
     prev_approved_path_ = path;
     if (
@@ -160,7 +161,8 @@ BehaviorModuleOutput LaneChangeModule::plan()
     }
   } else {
     resetPathIfAbort(selected_path);
-    path = util::resamplePathWithSpline(selected_path, resample_interval);
+    // path = util::resamplePathWithSpline(selected_path, resample_interval);
+    path = selected_path;
     generateExtendedDrivableArea(path);
   }
 
