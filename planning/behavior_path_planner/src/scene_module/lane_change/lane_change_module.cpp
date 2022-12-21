@@ -148,10 +148,8 @@ BehaviorModuleOutput LaneChangeModule::plan()
   if (!isAbortState()) {
     path = selected_path;
     generateExtendedDrivableArea(path);
-    prev_approved_path_ = path;
     if (
-      (is_abort_condition_satisfied_ && isNearEndOfLane() && isCurrentSpeedLow()) ||
-      isStopState()) {
+      (is_abort_condition_satisfied_ && isNearEndOfLane() && isCurrentSpeedLow())) {
       const auto stop_point = util::insertStopPoint(0.1, &path);
     }
   } else {
@@ -245,7 +243,7 @@ CandidateOutput LaneChangeModule::planCandidate() const
 BehaviorModuleOutput LaneChangeModule::planWaitingApproval()
 {
   BehaviorModuleOutput out;
-  if (!isAbortState()) {
+  if (is_within_original_lane) {
     const auto lane_keeping_path = getReferencePath();
     prev_approved_path_ = lane_keeping_path;
     out.path = std::make_shared<PathWithLaneId>(lane_keeping_path);
@@ -468,10 +466,11 @@ bool LaneChangeModule::isAbortConditionSatisfied()
 {
   const auto & common_parameters = planner_data_->parameters;
   is_abort_condition_satisfied_ = false;
+  is_within_original_lane = true;
+  current_lane_change_state_ = LaneChangeStates::Normal;
 
   // check cancel enable flag
   if (!parameters_->enable_cancel_lane_change) {
-    current_lane_change_state_ = LaneChangeStates::Normal;
     return false;
   }
 
@@ -485,12 +484,12 @@ bool LaneChangeModule::isAbortConditionSatisfied()
   const auto is_path_safe = isApprovedPathSafe(ego_pose_before_collision);
 
   if (!is_path_safe) {
-    current_lane_change_state_ = LaneChangeStates::Cancel;
 
-    const bool is_within_original_lane = lane_change_utils::isEgoWithinOriginalLane(
+    is_within_original_lane = lane_change_utils::isEgoWithinOriginalLane(
       status_.current_lanes, getEgoPose(), common_parameters);
 
     if (is_within_original_lane) {
+      current_lane_change_state_ = LaneChangeStates::Cancel;
       return true;
     }
 
@@ -530,6 +529,11 @@ bool LaneChangeModule::isAbortConditionSatisfied()
 bool LaneChangeModule::isAbortState() const
 {
   return (current_lane_change_state_ == LaneChangeStates::Abort) && abort_path_;
+}
+
+bool LaneChangeModule::isCancelState() const
+{
+  return (current_lane_change_state_ == LaneChangeStates::Cancel);
 }
 
 bool LaneChangeModule::isStopState() const
