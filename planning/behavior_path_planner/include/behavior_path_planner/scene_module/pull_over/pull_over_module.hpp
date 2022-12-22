@@ -65,6 +65,7 @@ struct PUllOverStatus
   bool prev_is_safe{false};
   bool has_decided_velocity{false};
   bool has_requested_approval{false};
+  std::optional<Pose> stop_pose{};
 };
 
 class PullOverModule : public SceneModuleInterface
@@ -98,9 +99,6 @@ private:
   PullOverPath shift_parking_path_;
   vehicle_info_util::VehicleInfo vehicle_info_;
 
-  const double pull_over_lane_length_{200.0};
-  const double check_distance_{100.0};
-
   rclcpp::Subscription<OccupancyGrid>::SharedPtr occupancy_grid_sub_;
   rclcpp::Publisher<PoseStamped>::SharedPtr goal_pose_pub_;
 
@@ -120,16 +118,12 @@ private:
   void incrementPathIndex();
   PathWithLaneId getCurrentPath() const;
   PathWithLaneId getFullPath() const;
-  PathWithLaneId getReferencePath() const;
-  PathWithLaneId generateStopPath() const;
-  Pose calcRefinedGoal() const;
+  Pose calcRefinedGoal(const Pose & goal_pose) const;
   ParallelParkingParameters getGeometricPullOverParameters() const;
-  bool isLongEnoughToParkingStart(
-    const PathWithLaneId & path, const Pose & parking_start_pose) const;
-  bool isLongEnough(
-    const lanelet::ConstLanelets & lanelets, const Pose & goal_pose, const double buffer = 0) const;
-  double calcMinimumShiftPathDistance() const;
   double calcDistanceToPathChange() const;
+  PathWithLaneId generateStopPath();
+  PathWithLaneId generateEmergencyStopPath();
+
   bool isStopped();
   bool hasFinishedCurrentPath();
   bool hasFinishedPullOver();

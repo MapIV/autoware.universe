@@ -16,6 +16,7 @@
 #define MOTION_UTILS__MARKER__MARKER_HELPER_HPP_
 
 #include "tier4_autoware_utils/ros/marker_helper.hpp"
+#include "tier4_autoware_utils/tier4_autoware_utils.hpp"
 
 #include <string>
 
@@ -23,7 +24,7 @@ namespace motion_utils
 {
 visualization_msgs::msg::MarkerArray createStopVirtualWallMarker(
   const geometry_msgs::msg::Pose & pose, const std::string & module_name, const rclcpp::Time & now,
-  const int32_t id);
+  const int32_t id, const double longitudinal_offset = 0.0);
 
 visualization_msgs::msg::MarkerArray createSlowDownVirtualWallMarker(
   const geometry_msgs::msg::Pose & pose, const std::string & module_name, const rclcpp::Time & now,

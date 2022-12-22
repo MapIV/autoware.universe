@@ -45,13 +45,12 @@ protected:
     const lanelet::ConstLanelets & road_lanes, const Pose & end_pose) const;
   boost::optional<PullOverPath> generatePullOverPath(
     const lanelet::ConstLanelets & road_lanes, const lanelet::ConstLanelets & shoulder_lanes,
-    const Pose & goal_pose, const double lateral_jerk,
-    const double road_center_to_goal_distance) const;
+    const Pose & goal_pose, const double lateral_jerk) const;
   bool hasEnoughDistance(
     const PathWithLaneId & path, const lanelet::ConstLanelets & road_lanes, const Pose & start_pose,
     const Pose & goal_pose, const double pull_over_distance) const;
   bool isSafePath(const PathWithLaneId & path) const;
-  static double calcBeforeShiftedArcLegth(
+  static double calcBeforeShiftedArcLength(
     const PathWithLaneId & path, const double after_shifted_arc_length, const double dr);
   static std::vector<double> splineTwoPoints(
     std::vector<double> base_s, std::vector<double> base_x, const double begin_diff,

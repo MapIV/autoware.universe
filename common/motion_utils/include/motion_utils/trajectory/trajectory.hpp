@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace motion_utils

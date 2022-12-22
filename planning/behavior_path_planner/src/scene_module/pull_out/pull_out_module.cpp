@@ -518,8 +518,7 @@ bool PullOutModule::hasFinishedPullOut() const
     lanelet::utils::getArcCoordinates(status_.current_lanes, status_.pull_out_path.end_pose);
 
   // has passed pull out end point
-  return arclength_current.length - arclength_pull_out_end.length >
-         parameters_.pull_out_finish_judge_buffer;
+  return arclength_current.length - arclength_pull_out_end.length > 0.0;
 }
 
 void PullOutModule::checkBackFinished()
@@ -585,6 +584,8 @@ TurnSignalInfo PullOutModule::calcTurnSignalInfo(const Pose start_pose, const Po
 {
   TurnSignalInfo turn_signal;
 
+  const Pose & current_pose = planner_data_->self_pose->pose;
+
   // turn hazard light when backward driving
   if (!status_.back_finished) {
     turn_signal.hazard_signal.command = HazardLightsCommand::ENABLE;
@@ -602,14 +603,17 @@ TurnSignalInfo PullOutModule::calcTurnSignalInfo(const Pose start_pose, const Po
     arc_position_current_pose.length - arc_position_pull_out_end.length;
 
   // turn on right signal until passing pull_out end point
-  const double turn_signal_off_buffer = std::min(parameters_.pull_out_finish_judge_buffer, 3.0);
-  if (distance_from_pull_out_end < turn_signal_off_buffer) {
+  const auto path = getFullPath();
+  // pull out path does not overlap
+  const double distance_from_end = motion_utils::calcSignedArcLength(
+    path.points, status_.pull_out_path.end_pose.position, current_pose.position);
+  if (distance_from_end < 0.0) {
     turn_signal.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
   } else {
     turn_signal.turn_signal.command = TurnIndicatorsCommand::DISABLE;
   }
 
-  turn_signal.signal_distance = -distance_from_pull_out_end + turn_signal_off_buffer;
+  turn_signal.signal_distance = -distance_from_pull_out_end;
 
   return turn_signal;
 }

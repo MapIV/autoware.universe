@@ -49,7 +49,7 @@ public:
     const double pull_out_total_distance, const lanelet::ConstLanelets & current_lanes,
     const Pose & current_pose, const bool isInGoalRouteSection, const Pose & goal_pose);
 
-  double calcBeforeShiftedArcLegth(
+  double calcBeforeShiftedArcLength(
     const PathWithLaneId & path, const double target_after_arc_length, const double dr);
 
   std::shared_ptr<LaneDepartureChecker> lane_departure_checker_;

@@ -64,27 +64,17 @@ boost::optional<PullOverPath> ShiftPullOver::plan(const Pose & goal_pose)
   const int pull_over_sampling_num = parameters_.pull_over_sampling_num;
   const double jerk_resolution = std::abs(max_jerk - min_jerk) / pull_over_sampling_num;
 
+  // get road and shoulder lanes
   const auto road_lanes = util::getExtendedCurrentLanes(planner_data_);
   const auto shoulder_lanes = pull_over_utils::getPullOverLanes(*route_handler);
   if (road_lanes.empty() || shoulder_lanes.empty()) {
     return {};
   }
 
-  // calculate lateral distances from road lane center to goal
-  lanelet::ConstLanelet goal_closest_road_lane{};
-  lanelet::utils::query::getClosestLanelet(road_lanes, goal_pose, &goal_closest_road_lane);
-  const auto road_center_pose =
-    lanelet::utils::getClosestCenterPose(goal_closest_road_lane, goal_pose.position);
-  const double shoulder_left_bound_to_road_center = util::getSignedDistanceFromShoulderLeftBoundary(
-    shoulder_lanes, vehicle_footprint_, road_center_pose);
-  const double shoulder_left_bound_to_goal_distance =
-    util::getSignedDistanceFromShoulderLeftBoundary(shoulder_lanes, vehicle_footprint_, goal_pose);
-  const double road_center_to_goal_distance =
-    -shoulder_left_bound_to_road_center + shoulder_left_bound_to_goal_distance;
-
+  // find safe one from paths with different jerk
   for (double lateral_jerk = min_jerk; lateral_jerk <= max_jerk; lateral_jerk += jerk_resolution) {
-    const auto pull_over_path = generatePullOverPath(
-      road_lanes, shoulder_lanes, goal_pose, lateral_jerk, road_center_to_goal_distance);
+    const auto pull_over_path =
+      generatePullOverPath(road_lanes, shoulder_lanes, goal_pose, lateral_jerk);
     if (!pull_over_path) continue;
     return *pull_over_path;
   }
@@ -126,12 +116,10 @@ PathWithLaneId ShiftPullOver::generateReferencePath(
 
 boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   const lanelet::ConstLanelets & road_lanes, const lanelet::ConstLanelets & shoulder_lanes,
-  const Pose & goal_pose, const double lateral_jerk,
-  const double road_center_to_goal_distance) const
+  const Pose & goal_pose, const double lateral_jerk) const
 {
   const double pull_over_velocity = parameters_.pull_over_velocity;
   const double after_pull_over_straight_distance = parameters_.after_pull_over_straight_distance;
-  const double margin_from_boundary = parameters_.margin_from_boundary;
 
   const Pose shift_end_pose =
     tier4_autoware_utils::calcOffsetPose(goal_pose, -after_pull_over_straight_distance, 0, 0);
@@ -140,7 +128,7 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   const auto road_lane_reference_path_to_shift_end = util::resamplePathWithSpline(
     generateReferencePath(road_lanes, shift_end_pose), resample_interval_);
 
-  // caluculate shift length
+  // calculate shift length
   const Pose & shift_end_pose_road_lane =
     road_lane_reference_path_to_shift_end.points.back().point.pose;
   const double shift_end_road_to_target_distance =
@@ -150,7 +138,7 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   // calculate shift start pose on road lane
   const double pull_over_distance = PathShifter::calcLongitudinalDistFromJerk(
     shift_end_road_to_target_distance, lateral_jerk, pull_over_velocity);
-  const double before_shifted_pull_over_distance = calcBeforeShiftedArcLegth(
+  const double before_shifted_pull_over_distance = calcBeforeShiftedArcLength(
     road_lane_reference_path_to_shift_end, pull_over_distance, shift_end_road_to_target_distance);
   const auto shift_start_pose = motion_utils::calcLongitudinalOffsetPose(
     road_lane_reference_path_to_shift_end.points, shift_end_pose_road_lane.position,
@@ -169,7 +157,7 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   const bool offset_back = true;  // offset front side from reference path
   if (!path_shifter.generate(&shifted_path, offset_back)) return {};
 
-  // set same orientaion, because the reference center line orientation is not same to the
+  // set same orientation, because the reference center line orientation is not same to the
   shifted_path.path.points.back().point.pose.orientation = shift_end_pose.orientation;
 
   // for debug. result of shift is not equal to the target
@@ -229,6 +217,7 @@ boost::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
       std::min(point.point.longitudinal_velocity_mps, static_cast<float>(pull_over_velocity));
 
     // add target lanes to points after shift start
+    // add road lane_ids if not found
     for (const auto id : shifted_path.path.points.back().lane_ids) {
       if (std::find(point.lane_ids.begin(), point.lane_ids.end(), id) == point.lane_ids.end()) {
         point.lane_ids.push_back(id);
@@ -331,7 +320,7 @@ bool ShiftPullOver::isSafePath(const PathWithLaneId & path) const
   return true;
 }
 
-double ShiftPullOver::calcBeforeShiftedArcLegth(
+double ShiftPullOver::calcBeforeShiftedArcLength(
   const PathWithLaneId & path, const double target_after_arc_length, const double dr)
 {
   // reverse path for checking from the end point
