@@ -860,7 +860,9 @@ void PullOverModule::setDebugData()
 
   // Visualize stop pose
   if (status_.stop_pose) {
-    add(createStopVirtualWallMarker(*status_.stop_pose, "pull_over", clock_->now(), 0));
+    add(createStopVirtualWallMarker(
+      *status_.stop_pose, "pull_over", clock_->now(), 0,
+      planner_data_->parameters.base_link2front));
   }
 }
 
