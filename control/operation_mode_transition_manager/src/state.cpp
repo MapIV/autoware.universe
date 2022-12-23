@@ -14,8 +14,6 @@
 
 #include "state.hpp"
 
-#include "util.hpp"
-
 #include <motion_utils/motion_utils.hpp>
 #include <tier4_autoware_utils/tier4_autoware_utils.hpp>
 
@@ -199,7 +197,7 @@ std::pair<bool, bool> AutonomousMode::hasDangerLateralAcceleration()
 bool AutonomousMode::isModeChangeAvailable()
 {
   if (!check_engage_condition_) {
-    setAllOk(debug_info_);
+    debug_info_.is_all_ok = true;
     return true;
   }
 
