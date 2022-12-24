@@ -362,7 +362,6 @@ ShiftPoint SideShiftModule::calcShiftPoint() const
 {
   const auto & p = parameters_;
   const auto ego_speed = std::abs(planner_data_->self_odometry->twist.twist.linear.x);
-  const auto ego_pose = planner_data_->self_pose->pose;
 
   const double dist_to_start =
     std::max(p.min_distance_to_start_shifting, ego_speed * p.time_to_start_shifting);

@@ -739,7 +739,6 @@ std::vector<TargetObstacle> ObstacleCruisePlannerNode::filterObstacles(
 
     // precise detection area filtering with polygons
     geometry_msgs::msg::Point nearest_collision_point;
-    size_t collision_index;
     if (first_within_idx) {  // obstacles inside the trajectory
       // calculate nearest collision point
       nearest_collision_point = calcNearestCollisionPoint(
@@ -821,7 +820,6 @@ std::vector<TargetObstacle> ObstacleCruisePlannerNode::filterObstacles(
         continue;
       }
 
-      size_t collision_index;
       nearest_collision_point = calcNearestCollisionPoint(
         collision_traj_poly_idx.get(), future_collision_points, decimated_traj, is_driving_forward);
       debug_data.collision_points.push_back(nearest_collision_point);
