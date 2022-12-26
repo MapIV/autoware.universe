@@ -244,16 +244,15 @@ private:
   bool isAbortState() const;
   bool isCancelState() const;
   [[nodiscard]] static LaneChangeDirection getLaneChangeDirection(const LaneChangePath & path);
-  bool is_within_original_lane {true};
+  bool is_within_original_lane{true};
 
-    bool
-    isRequireTurnSignalWithoutApproval(const PathWithLaneId & path) const;
+  bool isRequireTurnSignalWithoutApproval(const PathWithLaneId & path) const;
 
   // getter
   Pose getEgoPose() const;
   Twist getEgoTwist() const;
   std_msgs::msg::Header getRouteHeader() const;
-  void resetPathIfAbort(PathWithLaneId & selected_path);
+  void resetPathIfAbort();
 
   // debug
   mutable std::unordered_map<std::string, CollisionCheckDebug> object_debug_;

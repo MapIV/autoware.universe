@@ -421,10 +421,9 @@ bool isLaneChangePathSafe(
   const auto & lane_changing_safety_check_duration =
     lane_change_parameters.lane_changing_safety_check_duration;
   const double check_end_time = lane_change_prepare_duration + lane_changing_safety_check_duration;
-  constexpr double ego_predicted_path_min_speed{1.0};
   const auto vehicle_predicted_path = util::convertToPredictedPath(
     path, current_twist, current_pose, check_end_time, time_resolution, acceleration,
-    ego_predicted_path_min_speed);
+    lane_change_parameters.minimum_lane_change_velocity);
 
   const auto arc = lanelet::utils::getArcCoordinates(current_lanes, current_pose);
 
@@ -434,7 +433,7 @@ bool isLaneChangePathSafe(
     util::filterObjectsByLanelets(*dynamic_objects, target_lanes);
 
   // find objects in current lane
-  constexpr double check_distance = 100.0;
+  const double check_distance = common_parameters.forward_path_length;
   const auto current_lane_object_indices_lanelet = util::filterObjectsByLanelets(
     *dynamic_objects, current_lanes, arc.length, arc.length + check_distance);
 
