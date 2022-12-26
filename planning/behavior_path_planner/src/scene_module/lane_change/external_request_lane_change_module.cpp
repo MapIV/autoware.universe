@@ -329,7 +329,12 @@ std::pair<bool, bool> ExternalRequestLaneChangeModule::getSafePath(
   const auto & route_handler = planner_data_->route_handler;
   const auto current_pose = getEgoPose();
   const auto current_twist = getEgoTwist();
-  const auto & common_parameters = planner_data_->parameters;
+  const auto common_parameters = planner_data_->parameters;
+  const auto params = std::invoke([&]() {
+    auto lc_param = *parameters_;
+    lc_param.lane_change_sampling_num = 1;
+    return lc_param;
+  });
 
   const auto current_lanes = util::getCurrentLanes(planner_data_);
 
@@ -337,7 +342,7 @@ std::pair<bool, bool> ExternalRequestLaneChangeModule::getSafePath(
     // find candidate paths
     const auto lane_change_paths = lane_change_utils::getLaneChangePaths(
       *route_handler, current_lanes, lane_change_lanes, current_pose, current_twist,
-      common_parameters, *parameters_);
+      common_parameters, params);
 
     // get lanes used for detection
     lanelet::ConstLanelets check_lanes;
@@ -356,7 +361,7 @@ std::pair<bool, bool> ExternalRequestLaneChangeModule::getSafePath(
       route_handler->getGoalPose(),
       common_parameters.minimum_lane_change_length +
         common_parameters.backward_length_buffer_for_end_of_lane +
-        parameters_->lane_change_finish_judge_buffer);
+        params.lane_change_finish_judge_buffer);
 
     if (valid_paths.empty()) {
       return std::make_pair(false, false);
@@ -366,9 +371,9 @@ std::pair<bool, bool> ExternalRequestLaneChangeModule::getSafePath(
     // select safe path
     const bool found_safe_path = lane_change_utils::selectSafePath(
       valid_paths, current_lanes, check_lanes, planner_data_->dynamic_object, current_pose,
-      current_twist, common_parameters, *parameters_, &safe_path, object_debug_);
+      current_twist, common_parameters, params, &safe_path, object_debug_);
 
-    if (parameters_->publish_debug_marker) {
+    if (params.publish_debug_marker) {
       setObjectDebugVisualization();
     } else {
       debug_marker_.markers.clear();
