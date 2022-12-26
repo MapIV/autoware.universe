@@ -211,12 +211,12 @@ CandidateOutput LaneChangeModule::planCandidate() const
   CandidateOutput output;
 
   LaneChangePath selected_path;
-    // Get lane change lanes
+  // Get lane change lanes
   const auto current_lanes = util::getCurrentLanes(planner_data_);
   const auto lane_change_lanes = getLaneChangeLanes(current_lanes, lane_change_lane_length_);
 
   [[maybe_unused]] const auto [found_valid_path, found_safe_path] =
-                     getSafePath(lane_change_lanes, check_distance_, selected_path);
+    getSafePath(lane_change_lanes, check_distance_, selected_path);
   selected_path.path.header = planner_data_->route_handler->getRouteHeader();
 
   if (isAbortState()) {

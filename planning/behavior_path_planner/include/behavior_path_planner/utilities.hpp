@@ -424,7 +424,8 @@ bool isSafeInFreeSpaceCollisionCheck(
   const BehaviorPathPlannerParameters & common_parameters, const double front_decel,
   const double rear_decel, CollisionCheckDebug & debug);
 
-double calcTotalLaneChangeDistanceWithBuffer(const BehaviorPathPlannerParameters & common_param, const bool include_buffer = true);
+double calcTotalLaneChangeDistanceWithBuffer(
+  const BehaviorPathPlannerParameters & common_param, const bool include_buffer = true);
 
 double calcLaneChangeBuffer(
   const BehaviorPathPlannerParameters & common_param, const int num_lane_change,

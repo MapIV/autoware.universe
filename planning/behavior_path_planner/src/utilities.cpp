@@ -2374,7 +2374,8 @@ bool isSafeInFreeSpaceCollisionCheck(
   return true;
 }
 
-double calcTotalLaneChangeDistanceWithBuffer(const BehaviorPathPlannerParameters & common_param, const bool include_buffer)
+double calcTotalLaneChangeDistanceWithBuffer(
+  const BehaviorPathPlannerParameters & common_param, const bool include_buffer)
 {
   const double minimum_lane_change_distance =
     common_param.minimum_lane_change_prepare_distance + common_param.minimum_lane_change_length;
