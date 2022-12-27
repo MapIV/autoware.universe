@@ -168,6 +168,8 @@ BehaviorModuleOutput LaneChangeModule::plan()
   BehaviorModuleOutput output;
 
   output.path = std::make_shared<PathWithLaneId>(path);
+
+  updateOutputTurnSignal(output);
   const auto turn_signal_info = output.turn_signal_info;
   if (turn_signal_info.turn_signal.command == TurnIndicatorsCommand::ENABLE_LEFT) {
     waitApprovalLeft(turn_signal_info.signal_distance);
