@@ -116,10 +116,10 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   route_subscriber_ = create_subscription<HADMapRoute>(
     "~/input/route", qos_transient_local, std::bind(&BehaviorPathPlannerNode::onRoute, this, _1),
     createSubscriptionOptions(this));
-  m_set_param_res = this->add_on_set_parameters_callback(
-    std::bind(&BehaviorPathPlannerNode::onSetParam, this, std::placeholders::_1));
 
   lane_change_param_ptr = std::make_shared<LaneChangeParameters>(getLaneChangeParam());
+  m_set_param_res = this->add_on_set_parameters_callback(
+    std::bind(&BehaviorPathPlannerNode::onSetParam, this, std::placeholders::_1));
 
   // behavior tree manager
   {
