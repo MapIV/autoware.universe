@@ -379,6 +379,64 @@ PredictedPath convertToPredictedPath(
   return predicted_path;
 }
 
+std::pair<PredictedPath, std::vector<double>> convertToPredictedPath(
+  const PathWithLaneId & path, const Twist & vehicle_twist, const Pose & vehicle_pose,
+  const double distance, const double resolution, const double acceleration, const double min_speed,
+  [[maybe_unused]] const bool temp)
+{
+  PredictedPath predicted_path{};
+  std::vector<double> accumulated_dist{};
+  predicted_path.time_step = rclcpp::Duration::from_seconds(resolution);
+  predicted_path.path.reserve(std::min(path.points.size(), static_cast<size_t>(100)));
+  if (path.points.empty()) {
+    return std::make_pair(predicted_path, accumulated_dist);
+  }
+
+  const auto & geometry_points = convertToGeometryPointArray(path);
+  FrenetCoordinate3d vehicle_pose_frenet =
+    convertToFrenetCoordinate3d(geometry_points, vehicle_pose.position);
+  auto clock{rclcpp::Clock{RCL_ROS_TIME}};
+  rclcpp::Time start_time = clock.now();
+  double vehicle_speed = std::abs(vehicle_twist.linear.x);
+  if (vehicle_speed < min_speed) {
+    vehicle_speed = min_speed;
+    RCLCPP_DEBUG_STREAM_THROTTLE(
+      rclcpp::get_logger("behavior_path_planner").get_child("utilities"), clock, 1000,
+      "cannot convert PathWithLaneId with zero velocity, using minimum value " << min_speed
+                                                                               << " [m/s] instead");
+  }
+
+  double prev_vehicle_speed = vehicle_speed;
+
+  // first point
+  const auto pt = lerpByLength(geometry_points, vehicle_pose_frenet.length);
+  Pose predicted_pose;
+  predicted_pose.position = pt;
+  predicted_path.path.push_back(predicted_pose);
+  double t = resolution;
+
+  for (double length = 0; length < distance;) {
+    double accelerated_velocity = prev_vehicle_speed + acceleration * t;
+    double travel_distance = 0;
+    if (accelerated_velocity < min_speed) {
+      travel_distance = min_speed * resolution;
+    } else {
+      travel_distance =
+        prev_vehicle_speed * resolution + 0.5 * acceleration * resolution * resolution;
+    }
+
+    length += travel_distance;
+    const auto pt = lerpByLength(path.points, vehicle_pose_frenet.length + length);
+    Pose predicted_pose;
+    predicted_pose.position = pt;
+    predicted_path.path.push_back(predicted_pose);
+    accumulated_dist.emplace_back(length);
+    prev_vehicle_speed = accelerated_velocity;
+    t += resolution;
+  }
+  return std::make_pair(predicted_path, accumulated_dist);
+}
+
 PredictedPath resamplePredictedPath(
   const PredictedPath & input_path, const double resolution, const double duration)
 {

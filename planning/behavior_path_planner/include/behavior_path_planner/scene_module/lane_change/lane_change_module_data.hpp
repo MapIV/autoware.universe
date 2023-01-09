@@ -27,7 +27,6 @@ struct LaneChangeParameters
 {
   // trajectory generation
   double lane_change_prepare_duration{2.0};
-  double lane_changing_safety_check_duration{4.0};
   double lane_changing_lateral_jerk{0.5};
   double lane_changing_lateral_acc{0.5};
   double lane_change_finish_judge_buffer{3.0};
@@ -90,6 +89,19 @@ enum class LaneChangeStates {
   Stop,
 };
 
+struct LaneChangePhaseInfo
+{
+  double prepare{0.0};
+  double lane_changing{0.0};
+
+  [[nodiscard]] double sum() const { return prepare + lane_changing; }
+};
+
+struct LaneChangeLanes
+{
+  lanelet::ConstLanelets current;
+  lanelet::ConstLanelets target;
+};
 }  // namespace behavior_path_planner
 
 #endif  // BEHAVIOR_PATH_PLANNER__SCENE_MODULE__LANE_CHANGE__LANE_CHANGE_MODULE_DATA_HPP_

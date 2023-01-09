@@ -56,6 +56,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace behavior_path_planner::util
@@ -97,7 +98,7 @@ struct ProjectedDistancePoint
   double distance{0.0};
 };
 
-template <typename Pythagoras = bg::strategy::distance::pythagoras<> >
+template <typename Pythagoras = bg::strategy::distance::pythagoras<>>
 ProjectedDistancePoint pointToSegment(
   const Point2d & reference_point, const Point2d & point_from_ego,
   const Point2d & point_from_object);
@@ -119,6 +120,11 @@ PredictedPath convertToPredictedPath(
   const PathWithLaneId & path, const Twist & vehicle_twist, const Pose & vehicle_pose,
   const double duration, const double resolution, const double acceleration,
   double min_speed = 1.0);
+
+std::pair<PredictedPath, std::vector<double>> convertToPredictedPath(
+  const PathWithLaneId & path, const Twist & vehicle_twist, const Pose & vehicle_pose,
+  const double duration, const double resolution, const double acceleration, const double min_speed,
+  const bool temp);
 
 FrenetCoordinate3d convertToFrenetCoordinate3d(
   const std::vector<Point> & linestring, const Point & search_point_geom);

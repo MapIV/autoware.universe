@@ -34,6 +34,8 @@ struct LaneChangePath
   double acceleration{0.0};
   double preparation_length{0.0};
   double lane_change_length{0.0};
+  double prepare_duration{0.0};
+  double lane_change_duration{0.0};
   PathWithLaneId prev_path;
 };
 using LaneChangePaths = std::vector<LaneChangePath>;

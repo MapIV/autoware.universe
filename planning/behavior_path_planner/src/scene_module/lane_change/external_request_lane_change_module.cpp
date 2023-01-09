@@ -405,9 +405,10 @@ std::pair<bool, bool> ExternalRequestLaneChangeModule::getSafePath(
     debug_valid_path_ = valid_paths;
 
     // select safe path
+    const auto lanes = LaneChangeLanes{current_lanes, check_lanes};
     const bool found_safe_path = lane_change_utils::selectSafePath(
-      valid_paths, current_lanes, check_lanes, planner_data_->dynamic_object, current_pose,
-      current_twist, common_parameters, params, &safe_path, object_debug_);
+      valid_paths, lanes, planner_data_->dynamic_object, current_pose, current_twist,
+      common_parameters, *parameters_, &safe_path, object_debug_);
 
     if (params.publish_debug_marker) {
       setObjectDebugVisualization();
@@ -600,7 +601,6 @@ bool ExternalRequestLaneChangeModule::isApprovedPathSafe(Pose & ego_pose_before_
   const auto current_pose = getEgoPose();
   const auto current_twist = getEgoTwist();
   const auto & dynamic_objects = planner_data_->dynamic_object;
-  const auto & current_lanes = status_.current_lanes;
   const auto & common_parameters = planner_data_->parameters;
   const auto & route_handler = planner_data_->route_handler;
   const auto path = status_.lane_change_path;
@@ -613,12 +613,14 @@ bool ExternalRequestLaneChangeModule::isApprovedPathSafe(Pose & ego_pose_before_
     path.path, status_.lane_change_lanes, check_distance_with_path);
 
   std::unordered_map<std::string, CollisionCheckDebug> debug_data;
-
+  const auto lanes = LaneChangeLanes{status_.current_lanes, check_lanes};
+  const auto lc_duration = LaneChangePhaseInfo{path.prepare_duration, path.lane_change_duration};
+  const auto lc_dist = LaneChangePhaseInfo{path.lane_change_length, path.lane_change_length};
   return lane_change_utils::isLaneChangePathSafe(
-    path.path, current_lanes, check_lanes, dynamic_objects, current_pose, current_twist,
-    common_parameters, *parameters_, common_parameters.expected_front_deceleration_for_abort,
-    common_parameters.expected_rear_deceleration_for_abort, ego_pose_before_collision, debug_data,
-    false, status_.lane_change_path.acceleration);
+    path.path, lanes, dynamic_objects, current_pose, current_twist, common_parameters, *parameters_,
+    common_parameters.expected_front_deceleration_for_abort,
+    common_parameters.expected_rear_deceleration_for_abort, lc_dist, lc_duration,
+    ego_pose_before_collision, debug_data, false, status_.lane_change_path.acceleration);
 }
 
 void ExternalRequestLaneChangeModule::updateOutputTurnSignal(BehaviorModuleOutput & output)
