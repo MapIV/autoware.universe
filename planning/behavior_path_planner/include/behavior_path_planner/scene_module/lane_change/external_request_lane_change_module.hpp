@@ -59,8 +59,6 @@ public:
     const std::string & name, rclcpp::Node & node, std::shared_ptr<LaneChangeParameters> parameters,
     const Direction & direction);
 
-  BehaviorModuleOutput run() override;
-
   bool isExecutionRequested() const override;
   bool isExecutionReady() const override;
   BT::NodeStatus updateState() override;
@@ -83,11 +81,19 @@ protected:
   LaneChangeStatus status_;
   PathShifter path_shifter_;
   mutable LaneChangeDebugMsgArray lane_change_debug_msg_array_;
+  mutable LaneChangeStates current_lane_change_state_;
+  mutable std::shared_ptr<LaneChangePath> abort_path_;
+  PathWithLaneId prev_approved_path_;
+  mutable Pose abort_non_collision_pose_;
 
   Direction direction_;
 
   double lane_change_lane_length_{200.0};
   double check_distance_{100.0};
+
+  bool is_abort_path_approved_ = false;
+  bool is_abort_approval_requested_ = false;
+  bool is_abort_condition_satisfied_ = false;
 
   bool is_activated_ = false;
 
@@ -107,18 +113,26 @@ protected:
   void updateLaneChangeStatus();
   void generateExtendedDrivableArea(PathWithLaneId & path);
   void updateOutputTurnSignal(BehaviorModuleOutput & output);
+  bool isApprovedPathSafe(Pose & ego_pose_before_collision) const;
   bool isSafe() const;
   bool isValidPath(const PathWithLaneId & path) const;
   bool isNearEndOfLane() const;
   bool isCurrentSpeedLow() const;
-  bool isAbortConditionSatisfied() const;
+  bool isAbortConditionSatisfied();
   bool hasFinishedLaneChange() const;
+  bool isStopState() const;
+  bool isAbortState() const;
+  bool isCancelState() const;
+
+  bool is_within_original_lane{true};
+
   void resetParameters();
 
   // getter
   Pose getEgoPose() const;
   Twist getEgoTwist() const;
   std_msgs::msg::Header getRouteHeader() const;
+  void resetPathIfAbort();
 
   // debug
   mutable std::unordered_map<std::string, CollisionCheckDebug> object_debug_;
