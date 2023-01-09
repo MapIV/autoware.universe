@@ -244,7 +244,6 @@ private:
   bool isAbortState() const;
   bool isCancelState() const;
   [[nodiscard]] static LaneChangeDirection getLaneChangeDirection(const LaneChangePath & path);
-  bool is_within_original_lane{true};
 
   bool isRequireTurnSignalWithoutApproval(const PathWithLaneId & path) const;
 
