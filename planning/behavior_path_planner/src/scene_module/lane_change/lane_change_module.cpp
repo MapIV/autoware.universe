@@ -492,6 +492,10 @@ bool LaneChangeModule::isAbortConditionSatisfied()
     return false;
   }
 
+  if(isNearEndOfLane()) {
+    return false;
+  }
+
   const auto is_within_original_lane = lane_change_utils::isEgoWithinOriginalLane(
     status_.current_lanes, getEgoPose(), common_parameters);
 
