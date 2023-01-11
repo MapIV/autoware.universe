@@ -119,13 +119,18 @@ bool AvoidanceModule::isExecutionReady() const
 
 BT::NodeStatus AvoidanceModule::updateState()
 {
+  const auto is_near_terminal = isNearTerminal();
+  constexpr double eps_vel = 0.01;
+  const auto is_stopped = planner_data_->self_odometry->twist.twist.linear.x < 0.01;
   const auto is_plan_running = isAvoidancePlanRunning();
 
   DebugData debug;
   const auto avoid_data = calcAvoidancePlanningData(debug);
   const bool has_avoidance_target = !avoid_data.target_objects.empty();
 
-  if (!is_plan_running && !has_avoidance_target) {
+  if (is_near_terminal && is_stopped) {
+    current_state_ = BT::NodeStatus::SUCCESS;
+  } else if (!is_plan_running && !has_avoidance_target) {
     current_state_ = BT::NodeStatus::SUCCESS;
   } else if (
     !has_avoidance_target && parameters_->enable_update_path_when_object_is_gone &&
@@ -140,6 +145,17 @@ BT::NodeStatus AvoidanceModule::updateState()
     "is_plan_running = %d, has_avoidance_target = %d", is_plan_running, has_avoidance_target);
 
   return current_state_;
+}
+
+bool AvoidanceModule::isNearTerminal() const
+{
+  if (prev_output_.path.points.empty()) {
+    return false;
+  }
+
+  const Pose terminal_pose = prev_output_.path.points.back().point.pose;
+  constexpr double th_arrived_distance = 1.0;
+  return calcDistance2d(planner_data_->self_pose->pose, terminal_pose) < th_arrived_distance;
 }
 
 bool AvoidanceModule::isAvoidancePlanRunning() const

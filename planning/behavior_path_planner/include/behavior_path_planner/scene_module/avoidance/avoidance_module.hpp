@@ -221,6 +221,7 @@ private:
 
   // -- for state management --
   bool is_avoidance_maneuver_starts;
+  bool isNearTerminal() const;
   bool isAvoidanceManeuverRunning();
   bool isAvoidancePlanRunning() const;
 
