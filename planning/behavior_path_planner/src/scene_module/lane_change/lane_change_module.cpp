@@ -492,7 +492,7 @@ bool LaneChangeModule::isAbortConditionSatisfied()
     return false;
   }
 
-  if(isNearEndOfLane()) {
+  if (isNearEndOfLane()) {
     return false;
   }
 
