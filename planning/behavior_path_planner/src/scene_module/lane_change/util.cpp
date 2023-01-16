@@ -686,10 +686,14 @@ bool isEgoWithinOriginalLane(
 {
   const auto lane_length = lanelet::utils::getLaneletLength2d(current_lanes);
   const auto lane_poly = lanelet::utils::getPolygonFromArcLength(current_lanes, 0, lane_length);
+  const auto & i = common_param.vehicle_info;
+  const auto & front_m = i.max_longitudinal_offset_m;
+  const auto & width_m = i.vehicle_width_m / 2.0;
+  const auto & back_m = i.rear_overhang_m;
   const auto vehicle_poly =
-    util::getVehiclePolygon(current_pose, common_param.vehicle_width, common_param.base_link2front);
+    util::convertBoundingBoxObjectToGeometryPolygon(current_pose, front_m, back_m, width_m);
   return boost::geometry::within(
-    lanelet::utils::to2D(vehicle_poly).basicPolygon(),
+    vehicle_poly,
     lanelet::utils::to2D(lane_poly).basicPolygon());
 }
 
