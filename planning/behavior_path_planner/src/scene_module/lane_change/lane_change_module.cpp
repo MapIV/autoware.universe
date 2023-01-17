@@ -622,19 +622,19 @@ bool LaneChangeModule::isApprovedPathSafe(Pose & ego_pose_before_collision) cons
   const auto current_twist = getEgoTwist();
   const auto & dynamic_objects = planner_data_->dynamic_object;
   const auto & common_parameters = planner_data_->parameters;
-  const auto & route_handler = planner_data_->route_handler;
-  const auto path = status_.lane_change_path;
+  const auto & path = status_.lane_change_path;
 
-  constexpr double check_distance = 100.0;
-  // get lanes used for detection
-  const double check_distance_with_path =
-    check_distance + path.preparation_length + path.lane_change_length;
-  const auto check_lanes = route_handler->getCheckTargetLanesFromPath(
-    path.path, status_.lane_change_lanes, check_distance_with_path);
+  // constexpr double check_distance = 100.0;
+  // // get lanes used for detection
+  // const double check_distance_with_path =
+  //   check_distance + path.preparation_length + path.lane_change_length;
+  // const auto check_lanes = route_handler->getCheckTargetLanesFromPath(
+  //   path.path, status_.lane_change_lanes, check_distance_with_path);
 
   std::unordered_map<std::string, CollisionCheckDebug> debug_data;
 
-  const auto lanes = LaneChangeLanes{status_.current_lanes, check_lanes};
+  const auto lanes = LaneChangeLanes{
+    status_.lane_change_path.reference_lanelets, status_.lane_change_path.target_lanelets};
   const auto lc_duration = LaneChangePhaseInfo{path.prepare_duration, path.lane_change_duration};
   const auto lc_dist = LaneChangePhaseInfo{path.preparation_length, path.lane_change_length};
   return lane_change_utils::isLaneChangePathSafe(
