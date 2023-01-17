@@ -2206,7 +2206,7 @@ bool getObjectExpectedPoseAndConvertToPolygon(
 {
   bool is_lerped =
     util::lerpByTimeStamp(pred_path, check_current_time, &expected_pose, failed_reason);
-  expected_pose.orientation = object.kinematics.initial_pose_with_covariance.pose.orientation;
+  // expected_pose.orientation = object.kinematics.initial_pose_with_covariance.pose.orientation;
 
   is_lerped = util::calcObjectPolygon(object.shape, expected_pose, &obj_polygon);
   return is_lerped;
