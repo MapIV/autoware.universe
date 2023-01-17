@@ -140,7 +140,7 @@ std::optional<LaneChangePath> constructCandidatePath(
 
   LaneChangePath candidate_path;
   candidate_path.acceleration = acceleration;
-  candidate_path.preparation_length = prepare_distance;
+  candidate_path.preparation_length = util::getSignedDistance(prepare_segment.points.front().point.pose, prepare_segment.points.back().point.pose, original_lanelets);
   candidate_path.lane_change_length = lane_change_distance;
   const auto compute =
     prepare_distance / std::max(lane_change_param.minimum_lane_change_velocity, speed.prepare);
@@ -419,7 +419,7 @@ bool hasEnoughDistance(
 
 bool isLaneChangePathSafe(
   const PathWithLaneId & path, const LaneChangeLanes & lanes,
-  const PredictedObjects::ConstSharedPtr dynamic_objects, const Pose & current_pose,
+  const PredictedObjects::ConstSharedPtr dynamic_objects, [[maybe_unused]] const Pose & current_pose,
   const Twist & current_twist, const BehaviorPathPlannerParameters & common_parameters,
   const LaneChangeParameters & lane_change_parameters, const double front_decel,
   const double rear_decel, const LaneChangePhaseInfo lc_distance,
@@ -441,9 +441,11 @@ bool isLaneChangePathSafe(
   const auto & enable_collision_check_at_prepare_phase =
     lane_change_parameters.enable_collision_check_at_prepare_phase;
 
+  const auto & path_front = path.points.front().point.pose;
+
   const double min_lc_speed{lane_change_parameters.minimum_lane_change_velocity};
   const auto [vehicle_predicted_path, accumulated_dist] = util::convertToPredictedPath(
-    path, current_twist, path.points.front().point.pose, lc_distance.sum(), time_resolution, acceleration,
+    path, current_twist, path_front, lc_distance.sum(), time_resolution, acceleration,
     min_lc_speed, true);
   const auto prepare_phase_ignore_target_speed_thresh =
     lane_change_parameters.prepare_phase_ignore_target_speed_thresh;
@@ -561,7 +563,7 @@ bool isLaneChangePathSafe(
     if (is_object_in_target) {
       for (const auto & obj_path : predicted_paths) {
         if (!util::isSafeInLaneletCollisionCheck(
-              current_pose, current_twist, vehicle_predicted_path, vehicle_info, check_start_time,
+              path_front, current_twist, vehicle_predicted_path, vehicle_info, check_start_time,
               check_end_time, time_resolution, obj, obj_path, common_parameters, front_decel,
               rear_decel, ego_pose_before_collision, current_debug_data.second)) {
           appendDebugInfo(current_debug_data, false);

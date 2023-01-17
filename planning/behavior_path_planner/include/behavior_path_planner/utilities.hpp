@@ -195,6 +195,27 @@ Point lerpByLength(const std::vector<T> & point_array, const double length)
   return tier4_autoware_utils::getPoint(point_array.back());
 }
 
+template <class T>
+Pose lerpPoseByLength(const std::vector<T> & point_array, const double length)
+{
+  Pose lerped_point;
+  if (point_array.empty()) {
+    return lerped_point;
+  }
+  Pose prev_geom_pt = tier4_autoware_utils::getPose(point_array.front());
+  double accumulated_length = 0;
+  for (const auto & pt : point_array) {
+    const auto & geom_pt = tier4_autoware_utils::getPose(pt);
+    const double distance = tier4_autoware_utils::calcDistance3d(prev_geom_pt.position, geom_pt.position);
+    if (accumulated_length + distance > length) {
+      return lerpByPose(prev_geom_pt, geom_pt, (length - accumulated_length) / distance);
+    }
+    accumulated_length += distance;
+    prev_geom_pt = geom_pt;
+  }
+
+  return tier4_autoware_utils::getPose(point_array.back());
+}
 bool lerpByTimeStamp(const PredictedPath & path, const double t, Pose * lerped_pt);
 
 bool lerpByDistance(
