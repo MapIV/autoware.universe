@@ -443,7 +443,7 @@ bool isLaneChangePathSafe(
 
   const double min_lc_speed{lane_change_parameters.minimum_lane_change_velocity};
   const auto [vehicle_predicted_path, accumulated_dist] = util::convertToPredictedPath(
-    path, current_twist, current_pose, lc_distance.sum(), time_resolution, acceleration,
+    path, current_twist, path.points.front().point.pose, lc_distance.sum(), time_resolution, acceleration,
     min_lc_speed, true);
   const auto prepare_phase_ignore_target_speed_thresh =
     lane_change_parameters.prepare_phase_ignore_target_speed_thresh;
@@ -488,18 +488,31 @@ bool isLaneChangePathSafe(
       }
     };
 
-  const auto calc_start_time =
-    [&](const auto object_speed, [[maybe_unused]] const auto & accum_dist) {
-      if (
-        enable_collision_check_at_prepare_phase &&
-        (object_speed > prepare_phase_ignore_target_speed_thresh)) {
-        return 0.0;
+  const auto calc_start_time = [&](const auto object_speed, const auto & accum_dist) {
+    if (
+      enable_collision_check_at_prepare_phase &&
+      (object_speed > prepare_phase_ignore_target_speed_thresh)) {
+      return 0.0;
+    }
+    double duration{0.0};
+    for (const auto dist : accum_dist) {
+      if (dist > lc_distance.prepare) {
+        break;
       }
-      return lc_duration.prepare;
-    };
+      duration += time_resolution;
+    }
+    return duration;
+  };
 
-  const auto calc_end_time = [&]([[maybe_unused]] const auto & accum_dist) {
-    return lc_duration.sum();
+  const auto calc_end_time = [&](const auto & accum_dist) {
+    double duration{0.0};
+    for (const auto dist : accum_dist) {
+      if (dist > lc_distance.sum()) {
+        break;
+      }
+      duration += time_resolution;
+    }
+    return duration;
   };
 
   for (const auto & i : current_lane_object_indices) {
