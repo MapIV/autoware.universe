@@ -140,7 +140,9 @@ std::optional<LaneChangePath> constructCandidatePath(
 
   LaneChangePath candidate_path;
   candidate_path.acceleration = acceleration;
-  candidate_path.preparation_length = util::getSignedDistance(prepare_segment.points.front().point.pose, prepare_segment.points.back().point.pose, original_lanelets);
+  candidate_path.preparation_length = util::getSignedDistance(
+    prepare_segment.points.front().point.pose, prepare_segment.points.back().point.pose,
+    original_lanelets);
   candidate_path.lane_change_length = lane_change_distance;
   const auto compute =
     prepare_distance / std::max(lane_change_param.minimum_lane_change_velocity, speed.prepare);
@@ -419,8 +421,9 @@ bool hasEnoughDistance(
 
 bool isLaneChangePathSafe(
   const PathWithLaneId & path, const LaneChangeLanes & lanes,
-  const PredictedObjects::ConstSharedPtr dynamic_objects, [[maybe_unused]] const Pose & current_pose,
-  const Twist & current_twist, const BehaviorPathPlannerParameters & common_parameters,
+  const PredictedObjects::ConstSharedPtr dynamic_objects,
+  [[maybe_unused]] const Pose & current_pose, const Twist & current_twist,
+  const BehaviorPathPlannerParameters & common_parameters,
   const LaneChangeParameters & lane_change_parameters, const double front_decel,
   const double rear_decel, const LaneChangePhaseInfo lc_distance,
   [[maybe_unused]] const LaneChangePhaseInfo lc_duration, Pose & ego_pose_before_collision,
@@ -445,8 +448,8 @@ bool isLaneChangePathSafe(
 
   const double min_lc_speed{lane_change_parameters.minimum_lane_change_velocity};
   const auto [vehicle_predicted_path, accumulated_dist] = util::convertToPredictedPath(
-    path, current_twist, path_front, lc_distance.sum(), time_resolution, acceleration,
-    min_lc_speed, true);
+    path, current_twist, path_front, lc_distance.sum(), time_resolution, acceleration, min_lc_speed,
+    true);
   const auto prepare_phase_ignore_target_speed_thresh =
     lane_change_parameters.prepare_phase_ignore_target_speed_thresh;
 

@@ -206,7 +206,8 @@ Pose lerpPoseByLength(const std::vector<T> & point_array, const double length)
   double accumulated_length = 0;
   for (const auto & pt : point_array) {
     const auto & geom_pt = tier4_autoware_utils::getPose(pt);
-    const double distance = tier4_autoware_utils::calcDistance3d(prev_geom_pt.position, geom_pt.position);
+    const double distance =
+      tier4_autoware_utils::calcDistance3d(prev_geom_pt.position, geom_pt.position);
     if (accumulated_length + distance > length) {
       return lerpByPose(prev_geom_pt, geom_pt, (length - accumulated_length) / distance);
     }
