@@ -40,8 +40,8 @@ using lanelet::ArcCoordinates;
 inline double calcLaneChangeResamplingInterval(
   const double lane_changing_distance, const double lane_changing_speed)
 {
-  constexpr auto min_resampling_points{30.0};
-  constexpr auto resampling_dt{0.2};
+  constexpr auto min_resampling_points{25.0};
+  constexpr auto resampling_dt{0.3};
   return std::max(
     lane_changing_distance / min_resampling_points, lane_changing_speed * resampling_dt);
 }
