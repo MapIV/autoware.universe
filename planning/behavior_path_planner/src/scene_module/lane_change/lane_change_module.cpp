@@ -636,7 +636,10 @@ bool LaneChangeModule::isApprovedPathSafe(Pose & ego_pose_before_collision) cons
   const auto lanes = LaneChangeLanes{
     status_.lane_change_path.reference_lanelets, status_.lane_change_path.target_lanelets};
   const auto lc_duration = LaneChangePhaseInfo{path.prepare_duration, path.lane_change_duration};
-  const auto lc_dist = LaneChangePhaseInfo{path.preparation_length, path.lane_change_length};
+  const auto prepare_seg_dist = util::getSignedDistance(
+    path.prepare_segment.points.front().point.pose, path.prepare_segment.points.back().point.pose,
+    status_.lane_change_path.reference_lanelets);
+  const auto lc_dist = LaneChangePhaseInfo{prepare_seg_dist, path.lane_change_length};
   return lane_change_utils::isLaneChangePathSafe(
     path.path, lanes, dynamic_objects, current_pose, current_twist, common_parameters, *parameters_,
     common_parameters.expected_front_deceleration_for_abort,

@@ -17,6 +17,7 @@
 
 #include "behavior_path_planner/scene_module/utils/path_shifter.hpp"
 
+#include <autoware_auto_planning_msgs/msg/detail/path_with_lane_id__struct.hpp>
 #include <autoware_auto_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <vector>
@@ -29,6 +30,7 @@ struct LaneChangePath
   PathWithLaneId path;
   lanelet::ConstLanelets reference_lanelets;
   lanelet::ConstLanelets target_lanelets;
+  PathWithLaneId prepare_segment;
   ShiftedPath shifted_path;
   ShiftPoint shift_point;
   double acceleration{0.0};

@@ -140,9 +140,8 @@ std::optional<LaneChangePath> constructCandidatePath(
 
   LaneChangePath candidate_path;
   candidate_path.acceleration = acceleration;
-  candidate_path.preparation_length = util::getSignedDistance(
-    prepare_segment.points.front().point.pose, prepare_segment.points.back().point.pose,
-    original_lanelets);
+  candidate_path.prepare_segment = prepare_segment;
+  candidate_path.preparation_length = prepare_distance;
   candidate_path.lane_change_length = lane_change_distance;
   const auto compute =
     prepare_distance / std::max(lane_change_param.minimum_lane_change_velocity, speed.prepare);
@@ -195,7 +194,6 @@ std::optional<LaneChangePath> constructCandidatePath(
   if (!isPathInLanelets(candidate_path.path, original_lanelets, target_lanelets)) {
     return std::nullopt;
   }
-
   return std::optional<LaneChangePath>{candidate_path};
 }
 
@@ -347,7 +345,11 @@ bool selectSafePath(
   for (const auto & path : paths) {
     Pose ego_pose_before_collision;
     const auto lc_duration = LaneChangePhaseInfo{path.prepare_duration, path.lane_change_duration};
-    const auto lc_distance = LaneChangePhaseInfo{path.preparation_length, path.lane_change_length};
+
+    const auto prepare_seg_dist = util::getSignedDistance(
+      path.prepare_segment.points.front().point.pose, path.prepare_segment.points.back().point.pose,
+      lanes.current);
+    const auto lc_distance = LaneChangePhaseInfo{prepare_seg_dist, path.lane_change_length};
     if (isLaneChangePathSafe(
           path.path, lanes, dynamic_objects, current_pose, current_twist, common_parameters,
           ros_parameters, common_parameters.expected_front_deceleration,
