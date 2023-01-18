@@ -59,6 +59,28 @@ PathWithLaneId combineReferencePath(const PathWithLaneId & path1, const PathWith
 
 bool isPathInLanelets(
   const PathWithLaneId & path, const lanelet::ConstLanelets & original_lanelets,
+  const double original_lane_length, const lanelet::ConstLanelets & target_lanelets,
+  const double target_lane_length)
+{
+  const auto current_lane_poly =
+    lanelet::utils::getPolygonFromArcLength(original_lanelets, 0, original_lane_length);
+  const auto target_lane_poly =
+    lanelet::utils::getPolygonFromArcLength(target_lanelets, 0, target_lane_length);
+  const auto current_lane_poly_2d = lanelet::utils::to2D(current_lane_poly).basicPolygon();
+  const auto target_lane_poly_2d = lanelet::utils::to2D(target_lane_poly).basicPolygon();
+  for (const auto & pt : path.points) {
+    const lanelet::BasicPoint2d ll_pt(pt.point.pose.position.x, pt.point.pose.position.y);
+    const auto is_in_current = boost::geometry::covered_by(ll_pt, current_lane_poly_2d);
+    const auto is_in_target = boost::geometry::covered_by(ll_pt, target_lane_poly_2d);
+    if (!is_in_current && !is_in_target) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool isPathInLanelets(
+  const PathWithLaneId & path, const lanelet::ConstLanelets & original_lanelets,
   const lanelet::ConstLanelets & target_lanelets)
 {
   for (const auto & pt : path.points) {
@@ -114,7 +136,8 @@ std::pair<double, double> calcLaneChangingSpeedAndDistanceWhenDecelerate(
 std::optional<LaneChangePath> constructCandidatePath(
   const PathWithLaneId & prepare_segment, const PathWithLaneId & lane_changing_segment,
   const PathWithLaneId & target_lane_reference_path, const ShiftPoint & shift_point,
-  const lanelet::ConstLanelets & original_lanelets, const lanelet::ConstLanelets & target_lanelets,
+  const lanelet::ConstLanelets & original_lanelets, const double original_lane_length,
+  const lanelet::ConstLanelets & target_lanelets, const double target_lane_length,
   const double acceleration, const LaneChangePhaseInfo distance, const LaneChangePhaseInfo speed,
   const LaneChangeParameters & lane_change_param)
 {
@@ -193,7 +216,9 @@ std::optional<LaneChangePath> constructCandidatePath(
   }
 
   // check candidate path is in lanelet
-  if (!isPathInLanelets(candidate_path.path, original_lanelets, target_lanelets)) {
+  if (!isPathInLanelets(
+        candidate_path.path, original_lanelets, original_lane_length, target_lanelets,
+        target_lane_length)) {
     return std::nullopt;
   }
   return std::optional<LaneChangePath>{candidate_path};
@@ -244,6 +269,7 @@ LaneChangePaths getLaneChangePaths(
 
   const auto arc_position_from_current = lanelet::utils::getArcCoordinates(original_lanelets, pose);
   const auto arc_position_from_target = lanelet::utils::getArcCoordinates(target_lanelets, pose);
+  const auto original_lane_length = lanelet::utils::getLaneletLength2d(original_lanelets);
   const auto target_lane_length = lanelet::utils::getLaneletLength2d(target_lanelets);
 
   for (double acceleration = 0.0; acceleration >= -parameter.maximum_deceleration;
@@ -306,7 +332,8 @@ LaneChangePaths getLaneChangePaths(
     const auto lc_speed = LaneChangePhaseInfo{prepare_speed, lane_changing_speed};
     const auto candidate_path = constructCandidatePath(
       prepare_segment_reference, lane_changing_segment_reference, target_lane_reference_path,
-      shift_point, original_lanelets, target_lanelets, acceleration, lc_dist, lc_speed, parameter);
+      shift_point, original_lanelets, original_lane_length, target_lanelets, target_lane_length,
+      acceleration, lc_dist, lc_speed, parameter);
 
     if (!candidate_path) {
       continue;
