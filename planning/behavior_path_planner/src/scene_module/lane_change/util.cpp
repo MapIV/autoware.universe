@@ -62,23 +62,25 @@ bool isPathInLanelets(
   const lanelet::ConstLanelets & target_lanelets)
 {
   for (const auto & pt : path.points) {
-    bool is_in_lanelet = false;
-    for (const auto & llt : original_lanelets) {
-      if (lanelet::utils::isInLanelet(pt.point.pose, llt, 0.1)) {
-        is_in_lanelet = true;
-      }
+    const auto check_point = [&pt](const lanelet::ConstLanelet & llt) {
+      const auto & point = pt.point.pose.position;
+      const lanelet::Point2d converted(lanelet::InvalId, point.x, point.y, point.z);
+      return lanelet::geometry::inside(llt, converted.basicPoint2d());
+    };
+    const auto is_in_current =
+      std::any_of(original_lanelets.cbegin(), original_lanelets.cend(), check_point);
+    if (is_in_current) {
+      continue;
     }
-    for (const auto & llt : target_lanelets) {
-      if (lanelet::utils::isInLanelet(pt.point.pose, llt, 0.1)) {
-        is_in_lanelet = true;
-      }
-    }
-    if (!is_in_lanelet) {
+    const auto is_in_target =
+      std::any_of(target_lanelets.cbegin(), target_lanelets.cend(), check_point);
+    if (!is_in_target) {
       return false;
     }
   }
   return true;
 }
+
 double getExpectedVelocityWhenDecelerate(
   const double & velocity, const double & expected_acceleration, const double & duration)
 {
