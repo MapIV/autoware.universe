@@ -702,13 +702,13 @@ bool RouteHandler::getNextLaneletWithinRoute(
   lanelet::ConstLanelet start_lanelet;
   lanelet::ConstLanelet goal_lanelet;
   bool flag_check = true;
-  if(!getGoalLanelet(&goal_lanelet) ||!getClosestLaneletWithinRoute(route_msg_.start_pose,&start_lanelet))
-  {
-      flag_check = false;
+  if (
+    !getGoalLanelet(&goal_lanelet) ||
+    !getClosestLaneletWithinRoute(route_msg_.start_pose, &start_lanelet)) {
+    flag_check = false;
   }
-  if(goal_lanelet.id()==start_lanelet.id())
-  {
-      flag_check = false;
+  if (goal_lanelet.id() == start_lanelet.id()) {
+    flag_check = false;
   }
   if (exists(goal_lanelets_, lanelet)) {
     return false;
@@ -716,10 +716,8 @@ bool RouteHandler::getNextLaneletWithinRoute(
   const auto following_lanelets = routing_graph_ptr_->following(lanelet);
   for (const auto & llt : following_lanelets) {
     if (exists(route_lanelets_, llt)) {
-      if(flag_check)
-      {
-        if(start_lanelet.id()==llt.id())
-        {
+      if (flag_check) {
+        if (start_lanelet.id() == llt.id()) {
           continue;
         }
       }
