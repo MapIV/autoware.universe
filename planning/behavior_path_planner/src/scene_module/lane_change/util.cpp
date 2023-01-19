@@ -32,6 +32,84 @@
 #include <string>
 #include <vector>
 
+namespace
+{
+
+using autoware_auto_perception_msgs::msg::ObjectClassification;
+using autoware_auto_perception_msgs::msg::PredictedObjects;
+using autoware_auto_planning_msgs::msg::PathWithLaneId;
+using behavior_path_planner::util::calcObjectPolygon;
+using behavior_path_planner::util::getHighestProbLabel;
+using geometry_msgs::msg::Pose;
+using tier4_autoware_utils::LineString2d;
+using tier4_autoware_utils::Point2d;
+using tier4_autoware_utils::Polygon2d;
+
+void filterObjectIndices(
+  const PredictedObjects & objects, const lanelet::ConstLanelets & current_lanes,
+  const lanelet::ConstLanelets & target_lanes, const PathWithLaneId & ego_path,
+  const Pose & current_pose, const double forward_path_length, const double filter_width,
+  std::vector<size_t> & current_lane_obj_indices, std::vector<size_t> & target_lane_obj_indices,
+  std::vector<size_t> & others_obj_indices, const bool ignore_unknown_obj = false)
+{
+  // Reserve maximum amount possible
+  current_lane_obj_indices.reserve(objects.objects.size());
+  target_lane_obj_indices.reserve(objects.objects.size());
+  others_obj_indices.reserve(objects.objects.size());
+
+  const auto get_basic_polygon =
+    [](const lanelet::ConstLanelets & lanes, const double start_dist, const double end_dist) {
+      const auto polygon_3d = lanelet::utils::getPolygonFromArcLength(lanes, start_dist, end_dist);
+      return lanelet::utils::to2D(polygon_3d).basicPolygon();
+    };
+  const auto arc = lanelet::utils::getArcCoordinates(current_lanes, current_pose);
+  const auto current_polygon =
+    get_basic_polygon(current_lanes, arc.length, arc.length + forward_path_length);
+  const auto target_polygon =
+    get_basic_polygon(target_lanes, 0.0, std::numeric_limits<double>::max());
+  LineString2d ego_path_linestring;
+  ego_path_linestring.reserve(ego_path.points.size());
+  for (const auto & pt : ego_path.points) {
+    const auto & position = pt.point.pose.position;
+    boost::geometry::append(ego_path_linestring, Point2d(position.x, position.y));
+  }
+
+  for (size_t i = 0; i < objects.objects.size(); ++i) {
+    const auto & obj = objects.objects.at(i);
+
+    if (ignore_unknown_obj) {
+      const auto t = getHighestProbLabel(obj.classification);
+      if (t == ObjectClassification::UNKNOWN) {
+        continue;
+      }
+    }
+
+    Polygon2d obj_polygon;
+    if (!calcObjectPolygon(obj, &obj_polygon)) {
+      RCLCPP_ERROR_STREAM(
+        rclcpp::get_logger("behavior_path_planner").get_child("lane_change"),
+        "Failed to calcObjectPolygon...!!!");
+      continue;
+    }
+
+    if (boost::geometry::intersects(current_polygon, obj_polygon)) {
+      const double distance = boost::geometry::distance(obj_polygon, ego_path_linestring);
+
+      if (distance < filter_width) {
+        current_lane_obj_indices.push_back(i);
+      }
+    }
+
+    const bool is_intersect_with_target = boost::geometry::intersects(target_polygon, obj_polygon);
+    if (is_intersect_with_target) {
+      target_lane_obj_indices.push_back(i);
+    } else {
+      others_obj_indices.push_back(i);
+    }
+  }
+}
+}  // namespace
+
 namespace behavior_path_planner::lane_change_utils
 {
 using autoware_auto_planning_msgs::msg::PathPointWithLaneId;
@@ -59,43 +137,21 @@ PathWithLaneId combineReferencePath(const PathWithLaneId & path1, const PathWith
 
 bool isPathInLanelets(
   const PathWithLaneId & path, const lanelet::ConstLanelets & original_lanelets,
-  const double original_lane_length, const lanelet::ConstLanelets & target_lanelets,
-  const double target_lane_length)
+  const lanelet::ConstLanelets & target_lanelets)
 {
-  const auto current_lane_poly =
-    lanelet::utils::getPolygonFromArcLength(original_lanelets, 0, original_lane_length);
+  const auto current_lane_poly = lanelet::utils::getPolygonFromArcLength(
+    original_lanelets, 0, std::numeric_limits<double>::max());
   const auto target_lane_poly =
-    lanelet::utils::getPolygonFromArcLength(target_lanelets, 0, target_lane_length);
+    lanelet::utils::getPolygonFromArcLength(target_lanelets, 0, std::numeric_limits<double>::max());
   const auto current_lane_poly_2d = lanelet::utils::to2D(current_lane_poly).basicPolygon();
   const auto target_lane_poly_2d = lanelet::utils::to2D(target_lane_poly).basicPolygon();
   for (const auto & pt : path.points) {
     const lanelet::BasicPoint2d ll_pt(pt.point.pose.position.x, pt.point.pose.position.y);
     const auto is_in_current = boost::geometry::covered_by(ll_pt, current_lane_poly_2d);
-    const auto is_in_target = boost::geometry::covered_by(ll_pt, target_lane_poly_2d);
-    if (!is_in_current && !is_in_target) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool isPathInLanelets(
-  const PathWithLaneId & path, const lanelet::ConstLanelets & original_lanelets,
-  const lanelet::ConstLanelets & target_lanelets)
-{
-  for (const auto & pt : path.points) {
-    const auto check_point = [&pt](const lanelet::ConstLanelet & llt) {
-      const auto & point = pt.point.pose.position;
-      const lanelet::Point2d converted(lanelet::InvalId, point.x, point.y, point.z);
-      return lanelet::geometry::inside(llt, converted.basicPoint2d());
-    };
-    const auto is_in_current =
-      std::any_of(original_lanelets.cbegin(), original_lanelets.cend(), check_point);
     if (is_in_current) {
       continue;
     }
-    const auto is_in_target =
-      std::any_of(target_lanelets.cbegin(), target_lanelets.cend(), check_point);
+    const auto is_in_target = boost::geometry::covered_by(ll_pt, target_lane_poly_2d);
     if (!is_in_target) {
       return false;
     }
@@ -136,8 +192,7 @@ std::pair<double, double> calcLaneChangingSpeedAndDistanceWhenDecelerate(
 std::optional<LaneChangePath> constructCandidatePath(
   const PathWithLaneId & prepare_segment, const PathWithLaneId & lane_changing_segment,
   const PathWithLaneId & target_lane_reference_path, const ShiftPoint & shift_point,
-  const lanelet::ConstLanelets & original_lanelets, const double original_lane_length,
-  const lanelet::ConstLanelets & target_lanelets, const double target_lane_length,
+  const lanelet::ConstLanelets & original_lanelets, const lanelet::ConstLanelets & target_lanelets,
   const double acceleration, const LaneChangePhaseInfo distance, const LaneChangePhaseInfo speed,
   const LaneChangeParameters & lane_change_param)
 {
@@ -217,8 +272,7 @@ std::optional<LaneChangePath> constructCandidatePath(
 
   // check candidate path is in lanelet
   if (!isPathInLanelets(
-        candidate_path.path, original_lanelets, original_lane_length, target_lanelets,
-        target_lane_length)) {
+        candidate_path.path, original_lanelets, target_lanelets)) {
     return std::nullopt;
   }
   return std::optional<LaneChangePath>{candidate_path};
@@ -483,26 +537,20 @@ bool isLaneChangePathSafe(
     true);
   const auto prepare_phase_ignore_target_speed_thresh =
     lane_change_parameters.prepare_phase_ignore_target_speed_thresh;
-
-  const auto arc = lanelet::utils::getArcCoordinates(current_lanes, current_pose);
-
-  // find obstacle in lane change target lanes
-  // retrieve lanes that are merging target lanes as well
-  const auto target_lane_object_indices =
-    util::filterObjectsByLanelets(*dynamic_objects, target_lanes);
-
-  // find objects in current lane
-  const double check_distance = common_parameters.forward_path_length;
-  const auto current_lane_object_indices_lanelet = util::filterObjectsByLanelets(
-    *dynamic_objects, current_lanes, arc.length, arc.length + check_distance);
-
-  const double lateral_buffer = (use_buffer) ? 0.5 : 0.0;
   const auto & vehicle_info = common_parameters.vehicle_info;
-  const auto & vehicle_width = common_parameters.vehicle_width;
-  // const auto & vehicle_length = common_parameters.vehicle_length;
-  const auto current_lane_object_indices = util::filterObjectsByPath(
-    *dynamic_objects, current_lane_object_indices_lanelet, path,
-    vehicle_width / 2 + lateral_buffer);
+
+  std::vector<size_t> current_lane_object_indices{};
+  std::vector<size_t> target_lane_object_indices{};
+  std::vector<size_t> other_lane_object_indices{};
+  {
+    const auto lateral_buffer = (use_buffer) ? 0.5 : 0.0;
+    const auto current_obj_filtering_buffer = lateral_buffer + common_parameters.vehicle_width / 2;
+
+    filterObjectIndices(
+      *dynamic_objects, current_lanes, target_lanes, path, current_pose,
+      common_parameters.forward_path_length, current_obj_filtering_buffer,
+      current_lane_object_indices, target_lane_object_indices, other_lane_object_indices, true);
+  }
 
   const auto assignDebugData = [](const PredictedObject & obj) {
     CollisionCheckDebug debug;
