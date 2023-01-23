@@ -1356,6 +1356,34 @@ size_t findFirstNearestSegmentIndexWithSoftConstraints(
 
   return nearest_idx;
 }
+
+// NOTE: rear_offset is signed
+template <class T>
+void convertToRearWheelCenter(
+  std::vector<T> & points, const double rear_offset,
+  [[maybe_unused]] const bool is_containing_last_point = false)
+{
+  const auto cog_points = points;
+
+  for (size_t i = 0; i < cog_points.size() - 1; ++i) {  // TODO(murooka) consider last pose
+    // calculate beta, which is cog's velocity direction
+    const double beta = tier4_autoware_utils::calcAzimuthAngle(
+      tier4_autoware_utils::getPoint(cog_points.at(i)),
+      tier4_autoware_utils::getPoint(cog_points.at(i + 1)));
+
+    // apply beta to cog pose
+    geometry_msgs::msg::Pose cog_pose_with_beta;
+    cog_pose_with_beta.position = tier4_autoware_utils::getPoint(cog_points.at(i));
+    const double yaw = tf2::getYaw(tier4_autoware_utils::getPose(cog_points.at(i)).orientation);
+    cog_pose_with_beta.orientation = tier4_autoware_utils::createQuaternionFromYaw(yaw - beta);
+
+    const auto rear_pose =
+      tier4_autoware_utils::calcOffsetPose(cog_pose_with_beta, rear_offset, 0.0, 0.0);
+
+    // update pose
+    tier4_autoware_utils::setPose(rear_pose, points.at(i));
+  }
+}
 }  // namespace motion_utils
 
 #endif  // MOTION_UTILS__TRAJECTORY__TRAJECTORY_HPP_

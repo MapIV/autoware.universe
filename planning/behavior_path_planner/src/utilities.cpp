@@ -1646,6 +1646,8 @@ std::shared_ptr<PathWithLaneId> generateCenterLinePath(
   *centerline_path = getCenterLinePath(
     *route_handler, lanelet_sequence, pose, p.backward_path_length, p.forward_path_length, p);
 
+  motion_utils::convertToRearWheelCenter(centerline_path->points, -p.rear_overhang);
+
   centerline_path->header = route_handler->getRouteHeader();
 
   util::generateDrivableArea(*centerline_path, drivable_lanes, p.vehicle_length, planner_data);
