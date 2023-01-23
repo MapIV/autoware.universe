@@ -425,7 +425,7 @@ bool selectSafePath(
   for (const auto & path : paths) {
     Pose ego_pose_before_collision;
     if (isLaneChangePathSafe(
-          path.path, lanes, dynamic_objects, current_pose, current_twist, common_parameters,
+          path, lanes, dynamic_objects, current_pose, current_twist, common_parameters,
           ros_parameters, common_parameters.expected_front_deceleration,
           common_parameters.expected_rear_deceleration, path.length, path.duration,
           ego_pose_before_collision, debug_data, true, path.acceleration)) {
@@ -494,7 +494,7 @@ bool hasEnoughDistance(
 }
 
 bool isLaneChangePathSafe(
-  const PathWithLaneId & path, const LaneChangeLanes & lanes,
+  const LaneChangePath & lane_change_path, const LaneChangeLanes & lanes,
   const PredictedObjects::ConstSharedPtr dynamic_objects,
   [[maybe_unused]] const Pose & current_pose, const Twist & current_twist,
   const BehaviorPathPlannerParameters & common_parameters,
@@ -510,6 +510,7 @@ bool isLaneChangePathSafe(
   const auto & current_lanes = lanes.current;
   const auto & target_lanes = lanes.target;
 
+  const auto & path = lane_change_path.path;
   if (path.points.empty() || target_lanes.empty() || current_lanes.empty()) {
     return false;
   }
@@ -518,11 +519,21 @@ bool isLaneChangePathSafe(
   const auto & enable_collision_check_at_prepare_phase =
     lane_change_parameters.enable_collision_check_at_prepare_phase;
 
-  const auto & path_front = path.points.front().point.pose;
+  [[maybe_unused]] const auto get_pose = std::invoke([&]() {
+    Pose p;
+    double dist{0.0};
+    for (size_t i = 1; i < path.points.size(); ++i) {
+      dist += motion_utils::calcSignedArcLength(path.points, i - 1, i);
+      if (dist >= common_parameters.backward_path_length) {
+        return path.points.at(i).point.pose;
+      }
+    }
+    return path.points.front().point.pose;
+  });
 
   const double min_lc_speed{lane_change_parameters.minimum_lane_change_velocity};
   const auto [vehicle_predicted_path, accumulated_dist] = util::convertToPredictedPath(
-    path, current_twist, path_front, lc_distance.sum(), time_resolution, acceleration, min_lc_speed,
+    path, current_twist, get_pose, lc_distance.sum(), time_resolution, acceleration, min_lc_speed,
     true);
   const auto prepare_phase_ignore_target_speed_thresh =
     lane_change_parameters.prepare_phase_ignore_target_speed_thresh;
@@ -536,7 +547,7 @@ bool isLaneChangePathSafe(
     const auto current_obj_filtering_buffer = lateral_buffer + common_parameters.vehicle_width / 2;
 
     filterObjectIndices(
-      *dynamic_objects, current_lanes, target_lanes, path, current_pose,
+      *dynamic_objects, lanes.current, lanes.target, path, current_pose,
       common_parameters.forward_path_length, current_obj_filtering_buffer,
       current_lane_object_indices, target_lane_object_indices, other_lane_object_indices, true);
   }
@@ -561,39 +572,15 @@ bool isLaneChangePathSafe(
       }
     };
 
-  const auto calc_start_time = [&](const auto object_speed, const auto & accum_dist) {
-    if (
-      enable_collision_check_at_prepare_phase &&
-      (object_speed > prepare_phase_ignore_target_speed_thresh)) {
-      return 0.0;
-    }
-    double duration{0.0};
-    for (const auto dist : accum_dist) {
-      if (dist > lc_distance.prepare) {
-        break;
-      }
-      duration += time_resolution;
-    }
-    return duration;
-  };
-
-  const auto calc_end_time = [&](const auto & accum_dist) {
-    double duration{0.0};
-    for (const auto dist : accum_dist) {
-      if (dist > lc_distance.sum()) {
-        break;
-      }
-      duration += time_resolution;
-    }
-    return duration;
-  };
-
   for (const auto & i : current_lane_object_indices) {
     const auto & obj = dynamic_objects->objects.at(i);
     const auto object_speed =
       util::l2Norm(obj.kinematics.initial_twist_with_covariance.twist.linear);
-    const auto check_start_time = calc_start_time(object_speed, accumulated_dist);
-    const auto check_end_time = calc_end_time(accumulated_dist);
+    const double check_start_time = (enable_collision_check_at_prepare_phase &&
+                                     (object_speed > prepare_phase_ignore_target_speed_thresh))
+                                      ? 0.0
+                                      : lc_duration.prepare;
+    const double check_end_time = lc_duration.sum();
     auto current_debug_data = assignDebugData(obj);
     const auto predicted_paths =
       util::getPredictedPathFromObj(obj, lane_change_parameters.use_all_predicted_path);
@@ -629,12 +616,15 @@ bool isLaneChangePathSafe(
 
     const auto object_speed =
       util::l2Norm(obj.kinematics.initial_twist_with_covariance.twist.linear);
-    const auto check_start_time = calc_start_time(object_speed, accumulated_dist);
-    const auto check_end_time = calc_end_time(accumulated_dist);
+    const double check_start_time = (enable_collision_check_at_prepare_phase &&
+                                     (object_speed > prepare_phase_ignore_target_speed_thresh))
+                                      ? 0.0
+                                      : lc_duration.prepare;
+    const double check_end_time = lc_duration.sum();
     if (is_object_in_target) {
       for (const auto & obj_path : predicted_paths) {
         if (!util::isSafeInLaneletCollisionCheck(
-              path_front, current_twist, vehicle_predicted_path, vehicle_info, check_start_time,
+              current_pose, current_twist, vehicle_predicted_path, vehicle_info, check_start_time,
               check_end_time, time_resolution, obj, obj_path, common_parameters, front_decel,
               rear_decel, ego_pose_before_collision, current_debug_data.second)) {
           appendDebugInfo(current_debug_data, false);
