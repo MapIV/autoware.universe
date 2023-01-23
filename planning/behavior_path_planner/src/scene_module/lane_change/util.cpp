@@ -221,15 +221,15 @@ std::optional<LaneChangePath> constructCandidatePath(
   LaneChangePath candidate_path;
   candidate_path.acceleration = acceleration;
   candidate_path.prepare_segment = prepare_segment;
-  candidate_path.preparation_length = prepare_distance;
-  candidate_path.lane_change_length = lane_change_distance;
-  const auto compute =
-    prepare_distance / std::max(lane_change_param.minimum_lane_change_velocity, speed.prepare);
-  const auto compute_2 = std::floor(compute * 2) / 2;
-  candidate_path.prepare_duration =
-    std::min(compute_2, lane_change_param.lane_change_prepare_duration);
-  candidate_path.lane_change_duration =
-    std::round((lane_change_distance / lane_changing_speed) * 2) / 2;
+  candidate_path.length.prepare = prepare_distance;
+  candidate_path.length.lane_changing = lane_change_distance;
+  candidate_path.duration.prepare = std::invoke([&]() {
+    const auto duration =
+      prepare_distance / std::max(lane_change_param.minimum_lane_change_velocity, speed.prepare);
+    return std::min(duration, lane_change_param.lane_change_prepare_duration);
+  });
+  candidate_path.duration.lane_changing =
+    std::round((lane_change_distance / lane_changing_speed) * 2.0) / 2.0;
   ;
   candidate_path.shift_point = shift_point;
   candidate_path.reference_lanelets = original_lanelets;
@@ -271,8 +271,7 @@ std::optional<LaneChangePath> constructCandidatePath(
   }
 
   // check candidate path is in lanelet
-  if (!isPathInLanelets(
-        candidate_path.path, original_lanelets, target_lanelets)) {
+  if (!isPathInLanelets(candidate_path.path, original_lanelets, target_lanelets)) {
     return std::nullopt;
   }
   return std::optional<LaneChangePath>{candidate_path};
@@ -323,7 +322,6 @@ LaneChangePaths getLaneChangePaths(
 
   const auto arc_position_from_current = lanelet::utils::getArcCoordinates(original_lanelets, pose);
   const auto arc_position_from_target = lanelet::utils::getArcCoordinates(target_lanelets, pose);
-  const auto original_lane_length = lanelet::utils::getLaneletLength2d(original_lanelets);
   const auto target_lane_length = lanelet::utils::getLaneletLength2d(target_lanelets);
 
   for (double acceleration = 0.0; acceleration >= -parameter.maximum_deceleration;
@@ -386,8 +384,7 @@ LaneChangePaths getLaneChangePaths(
     const auto lc_speed = LaneChangePhaseInfo{prepare_speed, lane_changing_speed};
     const auto candidate_path = constructCandidatePath(
       prepare_segment_reference, lane_changing_segment_reference, target_lane_reference_path,
-      shift_point, original_lanelets, original_lane_length, target_lanelets, target_lane_length,
-      acceleration, lc_dist, lc_speed, parameter);
+      shift_point, original_lanelets, target_lanelets, acceleration, lc_dist, lc_speed, parameter);
 
     if (!candidate_path) {
       continue;
@@ -427,16 +424,10 @@ bool selectSafePath(
   debug_data.clear();
   for (const auto & path : paths) {
     Pose ego_pose_before_collision;
-    const auto lc_duration = LaneChangePhaseInfo{path.prepare_duration, path.lane_change_duration};
-
-    const auto prepare_seg_dist = util::getSignedDistance(
-      path.prepare_segment.points.front().point.pose, path.prepare_segment.points.back().point.pose,
-      lanes.current);
-    const auto lc_distance = LaneChangePhaseInfo{prepare_seg_dist, path.lane_change_length};
     if (isLaneChangePathSafe(
           path.path, lanes, dynamic_objects, current_pose, current_twist, common_parameters,
           ros_parameters, common_parameters.expected_front_deceleration,
-          common_parameters.expected_rear_deceleration, lc_distance, lc_duration,
+          common_parameters.expected_rear_deceleration, path.length, path.duration,
           ego_pose_before_collision, debug_data, true, path.acceleration)) {
       *selected_path = path;
       return true;
@@ -456,9 +447,7 @@ bool hasEnoughDistance(
   const Pose & goal_pose, const RouteHandler & route_handler,
   const double minimum_lane_change_length)
 {
-  const double & lane_change_prepare_distance = path.preparation_length;
-  const double & lane_changing_distance = path.lane_change_length;
-  const double lane_change_total_distance = lane_change_prepare_distance + lane_changing_distance;
+  const double lane_change_total_distance = path.length.sum();
   const int num = std::abs(route_handler.getNumLaneToPreferredLane(target_lanes.back()));
   const auto overall_graphs = route_handler.getOverallGraphPtr();
 

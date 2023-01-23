@@ -381,8 +381,7 @@ std::pair<bool, bool> ExternalRequestLaneChangeModule::getSafePath(
     if (!lane_change_paths.empty()) {
       const auto & longest_path = lane_change_paths.front();
       // we want to see check_distance [m] behind vehicle so add lane changing length
-      const double check_distance_with_path =
-        check_distance + longest_path.preparation_length + longest_path.lane_change_length;
+      const double check_distance_with_path = check_distance + longest_path.length.sum();
       check_lanes = route_handler->getCheckTargetLanesFromPath(
         longest_path.path, lane_change_lanes, check_distance_with_path);
     }
@@ -520,9 +519,8 @@ bool ExternalRequestLaneChangeModule::hasFinishedLaneChange() const
   const auto arclength_current =
     lanelet::utils::getArcCoordinates(status_.lane_change_lanes, current_pose);
   const double travel_distance = arclength_current.length - status_.start_distance;
-  const double finish_distance = status_.lane_change_path.preparation_length +
-                                 status_.lane_change_path.lane_change_length +
-                                 parameters_->lane_change_finish_judge_buffer;
+  const double finish_distance =
+    status_.lane_change_path.length.sum() + parameters_->lane_change_finish_judge_buffer;
   return travel_distance > finish_distance;
 }
 
@@ -602,14 +600,10 @@ bool ExternalRequestLaneChangeModule::isApprovedPathSafe(Pose & ego_pose_before_
   const auto lanes = LaneChangeLanes{
     status_.lane_change_path.reference_lanelets, status_.lane_change_path.target_lanelets};
   const auto lc_duration = LaneChangePhaseInfo{path.prepare_duration, path.lane_change_duration};
-  const auto prepare_seg_dist = util::getSignedDistance(
-    path.prepare_segment.points.front().point.pose, path.prepare_segment.points.back().point.pose,
-    status_.lane_change_path.reference_lanelets);
-  const auto lc_dist = LaneChangePhaseInfo{prepare_seg_dist, path.lane_change_length};
   return lane_change_utils::isLaneChangePathSafe(
     path.path, lanes, dynamic_objects, current_pose, current_twist, common_parameters, *parameters_,
     common_parameters.expected_front_deceleration_for_abort,
-    common_parameters.expected_rear_deceleration_for_abort, lc_dist, lc_duration,
+    common_parameters.expected_rear_deceleration_for_abort, path.length, lc_duration,
     ego_pose_before_collision, debug_data, false, status_.lane_change_path.acceleration);
 }
 
