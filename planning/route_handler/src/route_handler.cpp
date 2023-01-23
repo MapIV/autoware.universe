@@ -808,6 +808,12 @@ bool RouteHandler::getPreviousLaneletsWithinRoute(
   return !(prev_lanelets->empty());
 }
 
+lanelet::ConstLanelets RouteHandler::getPreviousLanelets(
+  const lanelet::ConstLanelet & lanelet) const
+{
+  return routing_graph_ptr_->previous(lanelet);
+}
+
 lanelet::ConstLanelets RouteHandler::getLaneletsFromPoint(const lanelet::ConstPoint3d & point) const
 {
   return lanelet::utils::findUsagesInLanelets(*lanelet_map_ptr_, point);
@@ -1654,6 +1660,12 @@ lanelet::ConstLanelets RouteHandler::getNeighborsWithinRoute(
     }
   }
   return neighbors_within_route;
+}
+
+lanelet::ConstLanelets RouteHandler::getLaneChangeableNeighbors(
+  const lanelet::ConstLanelet & lanelet) const
+{
+  return lanelet::utils::query::getLaneChangeableNeighbors(routing_graph_ptr_, lanelet);
 }
 
 std::vector<lanelet::ConstLanelets> RouteHandler::getLaneSection(
