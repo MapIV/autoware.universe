@@ -71,7 +71,7 @@ LaneChangePaths selectValidPaths(
   const Pose & current_pose, const Pose & goal_pose, const double minimum_lane_change_length);
 
 bool selectSafePath(
-  const LaneChangePaths & paths, const LaneChangeLanes & lanes,
+  const LaneChangePaths & paths, const RouteHandler & route_handler, const LaneChangeLanes & lanes,
   const PredictedObjects::ConstSharedPtr dynamic_objects, const Pose & current_pose,
   const Twist & current_twist, const BehaviorPathPlannerParameters & common_parameters,
   const behavior_path_planner::LaneChangeParameters & ros_parameters,
@@ -79,9 +79,10 @@ bool selectSafePath(
   std::unordered_map<std::string, CollisionCheckDebug> & debug_data);
 
 bool isLaneChangePathSafe(
-  const LaneChangePath & lane_change_path, const LaneChangeLanes & lanes,
-  const PredictedObjects::ConstSharedPtr dynamic_objects, const Pose & current_pose,
-  const Twist & current_twist, const BehaviorPathPlannerParameters & common_parameters,
+  const LaneChangePath & lane_change_path, const RouteHandler & route_handler,
+  const LaneChangeLanes & lanes, const PredictedObjects::ConstSharedPtr dynamic_objects,
+  const Pose & current_pose, const Twist & current_twist,
+  const BehaviorPathPlannerParameters & common_parameters,
   const LaneChangeParameters & lane_change_parameters, const double front_decel,
   const double rear_decel, const LaneChangePhaseInfo lc_distance,
   [[maybe_unused]] const LaneChangePhaseInfo lc_duration, Pose & ego_pose_before_collision,

@@ -36,6 +36,7 @@ geometry_msgs::msg::Polygon rotatePolygon(
   const geometry_msgs::msg::Polygon & polygon, const double & angle);
 Polygon2d toPolygon2d(
   const geometry_msgs::msg::Pose & pose, const autoware_auto_perception_msgs::msg::Shape & shape);
+Polygon2d toPolygon2d(const autoware_auto_perception_msgs::msg::PredictedObject & object);
 double getArea(const autoware_auto_perception_msgs::msg::Shape & shape);
 
 }  // namespace tier4_autoware_utils

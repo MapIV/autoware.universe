@@ -415,7 +415,7 @@ LaneChangePaths selectValidPaths(
 }
 
 bool selectSafePath(
-  const LaneChangePaths & paths, const LaneChangeLanes & lanes,
+  const LaneChangePaths & paths, const RouteHandler & route_handler, const LaneChangeLanes & lanes,
   const PredictedObjects::ConstSharedPtr dynamic_objects, const Pose & current_pose,
   const Twist & current_twist, const BehaviorPathPlannerParameters & common_parameters,
   const LaneChangeParameters & ros_parameters, LaneChangePath * selected_path,
@@ -425,8 +425,8 @@ bool selectSafePath(
   for (const auto & path : paths) {
     Pose ego_pose_before_collision;
     if (isLaneChangePathSafe(
-          path, lanes, dynamic_objects, current_pose, current_twist, common_parameters,
-          ros_parameters, common_parameters.expected_front_deceleration,
+          path, route_handler, lanes, dynamic_objects, current_pose, current_twist,
+          common_parameters, ros_parameters, common_parameters.expected_front_deceleration,
           common_parameters.expected_rear_deceleration, path.length, path.duration,
           ego_pose_before_collision, debug_data, true, path.acceleration)) {
       *selected_path = path;
@@ -494,8 +494,8 @@ bool hasEnoughDistance(
 }
 
 bool isLaneChangePathSafe(
-  const LaneChangePath & lane_change_path, const LaneChangeLanes & lanes,
-  const PredictedObjects::ConstSharedPtr dynamic_objects,
+  const LaneChangePath & lane_change_path, [[maybe_unused]] const RouteHandler & route_handler,
+  const LaneChangeLanes & lanes, const PredictedObjects::ConstSharedPtr dynamic_objects,
   [[maybe_unused]] const Pose & current_pose, const Twist & current_twist,
   const BehaviorPathPlannerParameters & common_parameters,
   const LaneChangeParameters & lane_change_parameters, const double front_decel,
@@ -530,6 +530,12 @@ bool isLaneChangePathSafe(
     }
     return path.points.front().point.pose;
   });
+  std::vector<std::shared_ptr<const lanelet::TrafficLight>> tl_reg_elems;
+
+  for (const auto & lane : lane_change_path.target_lanelets) {
+    const auto tl_reg_elem = lane.regulatoryElementsAs<const lanelet::TrafficLight>();
+    tl_reg_elems.insert(tl_reg_elems.end(), tl_reg_elem.begin(), tl_reg_elem.end());
+  }
 
   const double min_lc_speed{lane_change_parameters.minimum_lane_change_velocity};
   const auto [vehicle_predicted_path, accumulated_dist] = util::convertToPredictedPath(
@@ -621,6 +627,27 @@ bool isLaneChangePathSafe(
                                       ? 0.0
                                       : lc_duration.prepare;
     const double check_end_time = lc_duration.sum();
+    bool traffic_light_nearby{false};
+
+    for (const auto & tl : tl_reg_elems) {
+      const auto stop_line = *tl->stopLine();
+      // const auto obj_polygon = tier4_autoware_utils::toPolygon2d(obj);
+
+      const auto stop_line_center_point =
+        (stop_line.front().basicPoint() + stop_line.back().basicPoint()) / 2;
+      const auto & obj_pose = obj.kinematics.initial_pose_with_covariance.pose.position;
+      const lanelet::BasicPoint2d ll_pt(obj_pose.x, obj_pose.y);
+      const lanelet::BasicPoint2d tl_pt(stop_line_center_point.x(), stop_line_center_point.y());
+      const auto distance = std::abs(boost::geometry::distance(ll_pt, tl_pt));
+      traffic_light_nearby = (distance < 10.0 && object_speed < 1.0);
+    }
+
+    if (traffic_light_nearby) {
+      RCLCPP_INFO(
+        rclcpp::get_logger("behavior_path_planner").get_child("lane_change"),
+        "Traffic light nearby");
+      continue;
+    }
     if (is_object_in_target) {
       for (const auto & obj_path : predicted_paths) {
         if (!util::isSafeInLaneletCollisionCheck(

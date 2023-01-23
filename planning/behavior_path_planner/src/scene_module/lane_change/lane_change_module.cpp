@@ -419,8 +419,8 @@ std::pair<bool, bool> LaneChangeModule::getSafePath(
     // select safe path
     const auto lanes = LaneChangeLanes{current_lanes, check_lanes};
     const bool found_safe_path = lane_change_utils::selectSafePath(
-      valid_paths, lanes, planner_data_->dynamic_object, current_pose, current_twist,
-      common_parameters, *parameters_, &safe_path, object_debug_);
+      valid_paths, *route_handler, lanes, planner_data_->dynamic_object, current_pose,
+      current_twist, common_parameters, *parameters_, &safe_path, object_debug_);
 
     if (parameters_->publish_debug_marker) {
       setObjectDebugVisualization();
@@ -627,8 +627,8 @@ bool LaneChangeModule::isApprovedPathSafe(Pose & ego_pose_before_collision) cons
   const auto lanes = LaneChangeLanes{
     status_.lane_change_path.reference_lanelets, status_.lane_change_path.target_lanelets};
   return lane_change_utils::isLaneChangePathSafe(
-    path, lanes, dynamic_objects, current_pose, current_twist, common_parameters, *parameters_,
-    common_parameters.expected_front_deceleration_for_abort,
+    path, *planner_data_->route_handler, lanes, dynamic_objects, current_pose, current_twist,
+    common_parameters, *parameters_, common_parameters.expected_front_deceleration_for_abort,
     common_parameters.expected_rear_deceleration_for_abort, path.length, path.duration,
     ego_pose_before_collision, debug_data, false, status_.lane_change_path.acceleration);
 }
