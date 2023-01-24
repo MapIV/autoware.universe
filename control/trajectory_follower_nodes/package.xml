@@ -21,7 +21,8 @@
   <depend>rclcpp_components</depend>
   <depend>trajectory_follower</depend>
   <depend>vehicle_info_util</depend>
-
+  <depend>autoware_adapi_v1_msgs</depend>
+  
   <exec_depend>ros2launch</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>

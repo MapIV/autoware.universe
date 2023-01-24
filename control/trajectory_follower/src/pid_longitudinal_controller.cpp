@@ -197,6 +197,7 @@ void PidLongitudinalController::setInputData(InputData const & input_data)
 {
   setTrajectory(input_data.current_trajectory_ptr);
   setCurrentVelocity(input_data.current_odometry_ptr);
+  setCurrentOperationMode(input_data.current_operation_mode);
 }
 
 void PidLongitudinalController::setCurrentVelocity(
@@ -228,6 +229,11 @@ void PidLongitudinalController::setTrajectory(
   }
 
   m_trajectory_ptr = std::make_shared<autoware_auto_planning_msgs::msg::Trajectory>(*msg);
+}
+
+void PidLongitudinalController::setCurrentOperationMode(const OperationModeState & msg)
+{
+  m_current_operation_mode = msg;
 }
 
 rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallback(
@@ -902,7 +908,10 @@ float64_t PidLongitudinalController::applyVelocityFeedback(
   using trajectory_follower::DebugValues;
   const float64_t current_vel_abs = std::fabs(current_vel);
   const float64_t target_vel_abs = std::fabs(target_motion.vel);
-  const bool8_t enable_integration = (current_vel_abs > m_current_vel_threshold_pid_integrate);
+  const bool is_under_control = m_current_operation_mode.mode == OperationModeState::AUTONOMOUS;
+  const bool enable_integration =
+    (current_vel_abs > m_current_vel_threshold_pid_integrate) && is_under_control;
+
   const float64_t error_vel_filtered = m_lpf_vel_error->filter(target_vel_abs - current_vel_abs);
 
   std::vector<float64_t> pid_contributions(3);

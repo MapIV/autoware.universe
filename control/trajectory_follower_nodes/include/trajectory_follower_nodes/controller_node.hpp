@@ -58,6 +58,7 @@ namespace trajectory_follower_nodes
 {
 using autoware::common::types::bool8_t;
 using autoware::common::types::float64_t;
+using autoware_adapi_v1_msgs::msg::OperationModeState;
 namespace trajectory_follower = ::autoware::motion::control::trajectory_follower;
 namespace motion_common = ::autoware::motion::motion_common;
 
@@ -84,6 +85,7 @@ private:
   rclcpp::Subscription<autoware_auto_vehicle_msgs::msg::SteeringReport>::SharedPtr sub_steering_;
   rclcpp::Publisher<autoware_auto_control_msgs::msg::AckermannControlCommand>::SharedPtr
     control_cmd_pub_;
+  rclcpp::Subscription<OperationModeState>::SharedPtr sub_operation_mode_;
 
   enum class LateralControllerMode {
     INVALID = 0,
