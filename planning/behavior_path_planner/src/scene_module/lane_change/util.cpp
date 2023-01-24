@@ -22,7 +22,10 @@
 #include <lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <boost/geometry/algorithms/detail/distance/interface.hpp>
+
 #include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/primitives/Point.h>
 #include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -791,9 +794,18 @@ bool isEgoWithinOriginalLane(
   const auto lane_poly = lanelet::utils::getPolygonFromArcLength(current_lanes, 0, lane_length);
   const auto vehicle_poly =
     util::getVehiclePolygon(current_pose, common_param.vehicle_width, common_param.base_link2front);
-  return boost::geometry::within(
-    lanelet::utils::to2D(vehicle_poly).basicPolygon(),
-    lanelet::utils::to2D(lane_poly).basicPolygon());
+  const auto vehicle_poly_2d = lanelet::utils::to2D(lane_poly).basicPolygon();
+  for (const auto & vp : vehicle_poly) {
+    const lanelet::BasicPoint2d p(vp.x(), vp.y());
+    if (boost::geometry::within(p, vehicle_poly_2d)) {
+      continue;
+    }
+    const auto dist = lanelet::geometry::distance(p, vehicle_poly_2d);
+    if (dist >= 0.5) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool isEgoDistanceNearToCenterline(
