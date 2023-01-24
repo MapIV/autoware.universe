@@ -195,9 +195,12 @@ PidLongitudinalController::PidLongitudinalController(rclcpp::Node & node) : node
 }
 void PidLongitudinalController::setInputData(InputData const & input_data)
 {
+  if (!input_data.current_operation_mode_ptr) {
+    return;
+  }
   setTrajectory(input_data.current_trajectory_ptr);
   setCurrentVelocity(input_data.current_odometry_ptr);
-  setCurrentOperationMode(input_data.current_operation_mode);
+  setCurrentOperationMode(*input_data.current_operation_mode_ptr);
 }
 
 void PidLongitudinalController::setCurrentVelocity(
@@ -231,7 +234,7 @@ void PidLongitudinalController::setTrajectory(
   m_trajectory_ptr = std::make_shared<autoware_auto_planning_msgs::msg::Trajectory>(*msg);
 }
 
-void PidLongitudinalController::setCurrentOperationMode(const OperationModeState & msg)
+void PidLongitudinalController::setCurrentOperationMode(const OperationMode & msg)
 {
   m_current_operation_mode = msg;
 }
@@ -908,7 +911,7 @@ float64_t PidLongitudinalController::applyVelocityFeedback(
   using trajectory_follower::DebugValues;
   const float64_t current_vel_abs = std::fabs(current_vel);
   const float64_t target_vel_abs = std::fabs(target_motion.vel);
-  const bool is_under_control = m_current_operation_mode.mode == OperationModeState::AUTONOMOUS;
+  const bool is_under_control = m_current_operation_mode.mode == OperationMode::AUTONOMOUS;
   const bool enable_integration =
     (current_vel_abs > m_current_vel_threshold_pid_integrate) && is_under_control;
 

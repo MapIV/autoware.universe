@@ -79,9 +79,9 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
   control_cmd_pub_ = create_publisher<autoware_auto_control_msgs::msg::AckermannControlCommand>(
     "~/output/control_cmd", rclcpp::QoS{1}.transient_local());
 
-  sub_operation_mode_ = create_subscription<OperationModeState>(
+  sub_operation_mode_ = create_subscription<OperationMode>(
     "~/input/current_operation_mode", rclcpp::QoS{1},
-    [this](const OperationModeState::SharedPtr msg) { input_data_.current_operation_mode_ptr = msg; });
+    [this](const OperationMode::SharedPtr msg) { input_data_.current_operation_mode_ptr = msg; });
 
   // Timer
   {
@@ -145,7 +145,7 @@ bool Controller::isTimeOut()
 void Controller::callbackTimerControl()
 {
   if (!input_data_.current_operation_mode_ptr) {
-    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock()), 1000, "controller: waiting operation mode");
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "controller: waiting operation mode");
     return;
   }
   // Since the longitudinal uses the convergence information of the steer

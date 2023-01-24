@@ -19,7 +19,7 @@
 #include "autoware_auto_vehicle_msgs/msg/steering_report.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
-#include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
+#include "tier4_system_msgs/msg/operation_mode.hpp"
 
 namespace autoware
 {
@@ -34,7 +34,7 @@ struct InputData
   autoware_auto_planning_msgs::msg::Trajectory::SharedPtr current_trajectory_ptr;
   nav_msgs::msg::Odometry::SharedPtr current_odometry_ptr;
   autoware_auto_vehicle_msgs::msg::SteeringReport::SharedPtr current_steering_ptr;
-  autoware_adapi_v1_msgs::msg::OperationModeState::SharedPtr current_operation_mode_ptr;
+  tier4_system_msgs::msg::OperationMode::SharedPtr current_operation_mode_ptr;
 };
 }  // namespace trajectory_follower
 }  // namespace control

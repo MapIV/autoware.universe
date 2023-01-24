@@ -39,7 +39,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
 
-#include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
+#include "tier4_system_msgs/msg/operation_mode.hpp"
 
 #include <deque>
 #include <memory>
@@ -57,7 +57,7 @@ namespace trajectory_follower
 {
 using autoware::common::types::bool8_t;
 using autoware::common::types::float64_t;
-using autoware_adapi_v1_msgs::msg::OperationModeState;
+using tier4_system_msgs::msg::OperationMode;
 namespace trajectory_follower = ::autoware::motion::control::trajectory_follower;
 namespace motion_common = ::autoware::motion::motion_common;
 
@@ -107,13 +107,13 @@ private:
   std::shared_ptr<nav_msgs::msg::Odometry> m_current_velocity_ptr{nullptr};
   std::shared_ptr<nav_msgs::msg::Odometry> m_prev_velocity_ptr{nullptr};
   std::shared_ptr<autoware_auto_planning_msgs::msg::Trajectory> m_trajectory_ptr{nullptr};
-  OperationModeState m_current_operation_mode;
+  OperationMode m_current_operation_mode;
 
   /**
    * @brief set current operation mode with received message
    * @param [in] msg operation mode report message
    */
-  void setCurrentOperationMode(const OperationModeState & msg);
+  void setCurrentOperationMode(const OperationMode & msg);
 
   // vehicle info
   float64_t m_wheel_base;
