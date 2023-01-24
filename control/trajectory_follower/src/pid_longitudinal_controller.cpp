@@ -920,7 +920,16 @@ float64_t PidLongitudinalController::applyVelocityFeedback(
   std::vector<float64_t> pid_contributions(3);
   const float64_t pid_acc =
     m_pid_vel.calculate(error_vel_filtered, dt, enable_integration, pid_contributions);
-  const float64_t feedback_acc = target_motion.acc + pid_acc;
+
+  // ff scaling: for the coordinate convertion where feedforward is applied, from Time to Arclength.
+  constexpr double ff_scaling_max = 2.0;
+  constexpr double ff_scaling_min = 0.5;
+  const auto ff_scale =
+    std::clamp(current_vel_abs / std::max(target_vel_abs, 0.1), ff_scaling_min, ff_scaling_max);
+  const auto ff_acc = target_motion.acc * ff_scale;
+  m_debug_values.setValues(DebugValues::TYPE::FF_SCALE, ff_acc);
+
+  const float64_t feedback_acc = ff_acc + pid_acc;
 
   m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_PID_APPLIED, feedback_acc);
   m_debug_values.setValues(DebugValues::TYPE::ERROR_VEL_FILTERED, error_vel_filtered);
