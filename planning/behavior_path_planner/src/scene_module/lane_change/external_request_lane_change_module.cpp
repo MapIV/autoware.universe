@@ -601,11 +601,10 @@ bool ExternalRequestLaneChangeModule::isApprovedPathSafe(Pose & ego_pose_before_
 
   const auto lanes = LaneChangeLanes{
     status_.lane_change_path.reference_lanelets, status_.lane_change_path.target_lanelets};
-  const auto lc_duration = LaneChangePhaseInfo{path.prepare_duration, path.lane_change_duration};
   return lane_change_utils::isLaneChangePathSafe(
     path, *planner_data_->route_handler, lanes, dynamic_objects, current_pose, current_twist,
     common_parameters, *parameters_, common_parameters.expected_front_deceleration_for_abort,
-    common_parameters.expected_rear_deceleration_for_abort, path.length, lc_duration,
+    common_parameters.expected_rear_deceleration_for_abort, path.length, path.duration,
     ego_pose_before_collision, debug_data, false, status_.lane_change_path.acceleration);
 }
 
