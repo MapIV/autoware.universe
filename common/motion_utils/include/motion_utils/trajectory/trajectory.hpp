@@ -1360,16 +1360,16 @@ size_t findFirstNearestSegmentIndexWithSoftConstraints(
 // NOTE: rear_offset is signed
 template <class T>
 void convertToRearWheelCenter(
-  std::vector<T> & points, const double rear_offset,
+  std::vector<T> & points, const double rear_to_cog,
   [[maybe_unused]] const bool is_containing_last_point = false)
 {
   const auto cog_points = points;
 
+  const auto curvatures = calcCurvature(points);
+
   for (size_t i = 0; i < cog_points.size() - 1; ++i) {  // TODO(murooka) consider last pose
     // calculate beta, which is cog's velocity direction
-    const double beta = tier4_autoware_utils::calcAzimuthAngle(
-      tier4_autoware_utils::getPoint(cog_points.at(i)),
-      tier4_autoware_utils::getPoint(cog_points.at(i + 1)));
+    const double beta = std::asin(rear_to_cog * curvatures.at(i));
 
     // apply beta to cog pose
     geometry_msgs::msg::Pose cog_pose_with_beta;
