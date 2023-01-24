@@ -366,7 +366,7 @@ std::pair<bool, bool> ExternalRequestLaneChangeModule::getSafePath(
   const auto common_parameters = planner_data_->parameters;
   const auto params = std::invoke([&]() {
     auto lc_param = *parameters_;
-    lc_param.lane_change_sampling_num = 5;
+    lc_param.lane_change_sampling_num = 10;
     return lc_param;
   });
 
