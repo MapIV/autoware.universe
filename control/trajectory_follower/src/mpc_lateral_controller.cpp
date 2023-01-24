@@ -86,6 +86,7 @@ MpcLateralController::MpcLateralController(rclcpp::Node & node) : node_{&node}
   m_mpc.m_steer_rate_lim = steer_rate_lim_dps * deg2rad;
   const float64_t wheelbase =
     vehicle_info_util::VehicleInfoUtil(*node_).getVehicleInfo().wheel_base_m;
+  wheelbase_ = wheelbase;
 
   /* vehicle model setup */
   const std::string vehicle_model_type =
@@ -163,6 +164,36 @@ MpcLateralController::MpcLateralController(rclcpp::Node & node) : node_{&node}
 
 MpcLateralController::~MpcLateralController() {}
 
+double MpcLateralController::updateSteeringBias()
+{
+  const auto & twist = m_current_odometry_ptr->twist.twist;
+  const bool update_bias = (std::abs(twist.linear.x) > 1.0);
+  if (update_bias) {
+    const auto steer_actual = m_current_steering_ptr->steering_tire_angle;
+    const auto steer_angvel = std::atan2(twist.angular.z * wheelbase_, twist.linear.x);
+    const auto steer_bias = steer_actual - steer_angvel;
+    steering_bias_storage_.push_back(steer_bias);
+    if (steering_bias_storage_.size() > 1000) {
+      steering_bias_storage_.pop_front();
+    }
+    RCLCPP_INFO(
+      node_->get_logger(), "steer bias is updated: steering_bias_storage_ size = %lu",
+      steering_bias_storage_.size());
+  }
+
+  if (steering_bias_storage_.empty()) {
+    return 0.0;
+  }
+  const auto bias_ave =
+    std::accumulate(std::begin(steering_bias_storage_), std::end(steering_bias_storage_), 0.0) /
+    std::size(steering_bias_storage_);
+  RCLCPP_INFO(
+    node_->get_logger(), "steer bias is %f: steering_bias_storage_ size = %lu.", bias_ave,
+    steering_bias_storage_.size());
+  constexpr double steer_bias_lim = 0.0;
+  return std::clamp(bias_ave, steer_bias_lim, steer_bias_lim);
+}
+
 boost::optional<LateralOutput> MpcLateralController::run()
 {
   if (!checkData() || !updateCurrentPose()) {
@@ -181,6 +212,8 @@ boost::optional<LateralOutput> MpcLateralController::run()
   const bool8_t is_mpc_solved = m_mpc.calculateMPC(
     *m_current_steering_ptr, m_current_odometry_ptr->twist.twist.linear.x, m_current_pose_ptr->pose,
     ctrl_cmd, predicted_traj, diagnostic);
+  ctrl_cmd.steering_tire_angle += updateSteeringBias();
+  
 
   publishPredictedTraj(predicted_traj);
   publishDiagnostic(diagnostic);

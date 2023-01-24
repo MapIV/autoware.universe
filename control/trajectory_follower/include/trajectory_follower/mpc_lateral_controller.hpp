@@ -108,6 +108,10 @@ private:
   float64_t m_new_traj_end_dist;       // check trajectory shape change
   bool m_keep_steer_control_until_converged;
 
+  std::deque<double> steering_bias_storage_;
+  double wheelbase_;
+  double updateSteeringBias();
+
   // trajectory buffer for detecting new trajectory
   std::deque<autoware_auto_planning_msgs::msg::Trajectory> m_trajectory_buffer;
 
