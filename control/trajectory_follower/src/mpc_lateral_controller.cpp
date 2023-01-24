@@ -167,9 +167,18 @@ MpcLateralController::~MpcLateralController() {}
 double MpcLateralController::updateSteeringBias()
 {
   const auto & twist = m_current_odometry_ptr->twist.twist;
-  const bool update_bias = (std::abs(twist.linear.x) > 1.0);
+
+  constexpr double update_vel_threshold = 20.0 / 3.6;
+  constexpr double update_steer_threshold = 2.0 / 180.0 * M_PI;
+
+
+  const auto steer_actual = m_current_steering_ptr->steering_tire_angle;
+
+  const bool update_bias =
+    (std::abs(twist.linear.x) > update_vel_threshold &&
+     std::abs(steer_actual) < update_steer_threshold);
+
   if (update_bias) {
-    const auto steer_actual = m_current_steering_ptr->steering_tire_angle;
     const auto steer_angvel = std::atan2(twist.angular.z * wheelbase_, twist.linear.x);
     const auto steer_bias = steer_actual - steer_angvel;
     steering_bias_storage_.push_back(steer_bias);
