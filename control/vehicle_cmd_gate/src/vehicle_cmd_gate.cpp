@@ -85,6 +85,13 @@ VehicleCmdGate::VehicleCmdGate(const rclcpp::NodeOptions & node_options)
       current_operation_mode_ = *msg;
     });
 
+  kinematics_sub_ = create_subscription<Odometry>(
+    "input/kinematics", 1, [this](Odometry::SharedPtr msg) { current_kinematics_ = *msg; });
+  acc_sub_ = create_subscription<AccelWithCovarianceStamped>(
+    "input/acceleration", 1, [this](AccelWithCovarianceStamped::SharedPtr msg) {
+      current_acceleration_ = msg->accel.accel.linear.x;
+    });
+
   // Subscriber for auto
   auto_control_cmd_sub_ = this->create_subscription<AckermannControlCommand>(
     "input/auto/control_cmd", 1, std::bind(&VehicleCmdGate::onAutoCtrlCmd, this, _1));
@@ -518,13 +525,38 @@ AckermannControlCommand VehicleCmdGate::filterControlCommand(const AckermannCont
     filter_.filterAll(dt, current_steer_, out);
   }
 
-  // set prev value for both to keep consistency over switching
-  // TODO(Horibe): prev value should be actual steer, vel, acc when Manual mode to keep
-  // consistency when switching from Manual to Auto.
-  filter_.setPrevCmd(out);
-  filter_on_transition_.setPrevCmd(out);
+
+  // set prev value for both to keep consistency over switching:
+  // Actual steer, vel, acc should be considered in manual mode to prevent sudden motion when
+  // switching from manual to autonomous
+  auto prev_values =
+    (mode.mode == OperationModeState::AUTONOMOUS) ? out : getActualStatusAsCommand();
+
+  // TODO(Horibe): To prevent sudden acceleration/deceleration when switching from manual to
+  // autonomous, the filter should be applied for actual speed and acceleration during manual
+  // driving. However, this means that the output command from Gate will always be close to the
+  // driving state during manual driving. Since the Gate's output is checked by various modules as
+  // the intended value of Autoware, it should be closed to planned values. Conversely, it is
+  // undesirable for the target vehicle speed to be non-zero in a situation where the vehicle is
+  // supposed to stop. Until the appropriate handling will be done, previous value is used for the
+  // filter in manual mode.
+  prev_values.longitudinal = out.longitudinal;  // TODO(Horibe): to be removed
+
+  filter_.setPrevCmd(prev_values);
+  filter_on_transition_.setPrevCmd(prev_values);
 
   return out;
+}
+
+AckermannControlCommand VehicleCmdGate::getActualStatusAsCommand()
+{
+  AckermannControlCommand status;
+  status.stamp = status.lateral.stamp = status.longitudinal.stamp = this->now();
+  status.lateral.steering_tire_angle = current_steer_;
+  status.lateral.steering_tire_rotation_rate = 0.0;
+  status.longitudinal.speed = current_kinematics_.twist.twist.linear.x;
+  status.longitudinal.acceleration = current_acceleration_;
+  return status;
 }
 
 AckermannControlCommand VehicleCmdGate::createStopControlCmd() const

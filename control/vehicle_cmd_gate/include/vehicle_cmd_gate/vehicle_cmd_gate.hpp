@@ -39,6 +39,8 @@
 #include <tier4_system_msgs/msg/operation_mode.hpp>
 #include <tier4_vehicle_msgs/msg/vehicle_emergency_stamped.hpp>
 
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
+
 #include <memory>
 
 namespace vehicle_cmd_gate
@@ -56,6 +58,7 @@ using tier4_external_api_msgs::msg::Heartbeat;
 using tier4_external_api_msgs::srv::SetEmergency;
 using tier4_system_msgs::msg::OperationMode;
 using tier4_vehicle_msgs::msg::VehicleEmergencyStamped;
+using geometry_msgs::msg::AccelWithCovarianceStamped;
 
 using diagnostic_msgs::msg::DiagnosticStatus;
 using nav_msgs::msg::Odometry;
@@ -98,6 +101,9 @@ private:
   rclcpp::Subscription<SteeringReport>::SharedPtr steer_sub_;
   rclcpp::Subscription<OperationMode>::SharedPtr operation_mode_sub_;
 
+  rclcpp::Subscription<Odometry>::SharedPtr kinematics_sub_;             // for filter
+  rclcpp::Subscription<AccelWithCovarianceStamped>::SharedPtr acc_sub_;  // for filter
+
   void onGateMode(GateMode::ConstSharedPtr msg);
   void onEmergencyState(EmergencyState::ConstSharedPtr msg);
   void onExternalEmergencyStopHeartbeat(Heartbeat::ConstSharedPtr msg);
@@ -108,6 +114,9 @@ private:
   bool is_external_emergency_stop_ = false;
   double current_steer_ = 0;
   GateMode current_gate_mode_;
+  Odometry current_kinematics_;
+  double current_acceleration_ = 0.0;
+  AckermannControlCommand getActualStatusAsCommand();
 
   // Heartbeat
   std::shared_ptr<rclcpp::Time> emergency_state_heartbeat_received_time_;
