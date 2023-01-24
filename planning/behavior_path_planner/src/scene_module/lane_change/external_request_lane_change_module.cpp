@@ -101,23 +101,25 @@ bool ExternalRequestLaneChangeModule::isExecutionReady() const
 
 BT::NodeStatus ExternalRequestLaneChangeModule::updateState()
 {
-  RCLCPP_DEBUG(getLogger(), "LANE_CHANGE updateState");
-  if (!isSafe()) {
-    current_state_ = BT::NodeStatus::SUCCESS;
-    return current_state_;
-  }
-
+  RCLCPP_DEBUG(getLogger(), "External LANE_CHANGE updateState");
   if (isAbortConditionSatisfied()) {
     if (isNearEndOfLane() && isCurrentSpeedLow()) {
       current_state_ = BT::NodeStatus::RUNNING;
       return current_state_;
     }
-    // cancel lane change path
+
+    if (isAbortState()) {
+      current_state_ = BT::NodeStatus::RUNNING;
+      return current_state_;
+    }
+
     current_state_ = BT::NodeStatus::FAILURE;
     return current_state_;
   }
 
   if (hasFinishedLaneChange()) {
+    lane_change_debug_msg_array_.lane_change_info.clear();
+    abort_path_ = nullptr;
     current_state_ = BT::NodeStatus::SUCCESS;
     return current_state_;
   }
