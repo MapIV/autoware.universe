@@ -14,6 +14,8 @@
 
 #include "behavior_path_planner/utilities.hpp"
 
+#include "interpolation/spline_interpolation_points_2d.hpp"
+
 #include <lanelet2_extension/utility/message_conversion.hpp>
 #include <lanelet2_extension/utility/query.hpp>
 #include <lanelet2_extension/utility/utilities.hpp>
@@ -110,6 +112,41 @@ bool checkHasSameLane(
   const auto has_same = [&](const auto & ll) { return ll.id() == target_lane.id(); };
   return std::find_if(lanelets.begin(), lanelets.end(), has_same) != lanelets.end();
 }
+
+/*
+// NOTE: rear_offset is signed
+template <class T>
+void convertToRearWheelCenter(
+  std::vector<T> & points, const double rear_to_cog,
+  [[maybe_unused]] const bool is_containing_last_point = false)
+{
+  // TODO(murooka) rear_to_cog
+  const auto cog_points = points;
+
+  //calculate curvature from spline interpolation
+  const auto spline = SplineInterpolationPoints2d(points);
+  const auto curvatures = spline.getSplineInterpolatedCurvatures();
+
+  for (size_t i = 0; i < cog_points.size() - 1; ++i) {  // TODO(murooka) consider last pose
+    // calculate beta, which is CoG's velocity direction
+    // const double beta = std::asin(rear_to_cog * -curvatures.at(i));
+    const double beta = std::asin(rear_to_cog * curvatures.at(i));
+
+    // apply beta to CoG pose
+    geometry_msgs::msg::Pose cog_pose_with_beta;
+    cog_pose_with_beta.position = tier4_autoware_utils::getPoint(cog_points.at(i));
+    const double yaw = tf2::getYaw(tier4_autoware_utils::getPose(cog_points.at(i)).orientation);
+    cog_pose_with_beta.orientation = tier4_autoware_utils::createQuaternionFromYaw(yaw - beta);
+
+    const auto rear_pose =
+      // tier4_autoware_utils::calcOffsetPose(cog_pose_with_beta, rear_to_cog, 0.0, 0.0);
+      tier4_autoware_utils::calcOffsetPose(cog_pose_with_beta, -rear_to_cog, 0.0, 0.0);
+
+    // update pose
+    tier4_autoware_utils::setPose(rear_pose, points.at(i));
+  }
+}
+*/
 }  // namespace
 
 namespace behavior_path_planner::util
@@ -1646,8 +1683,6 @@ std::shared_ptr<PathWithLaneId> generateCenterLinePath(
   *centerline_path = getCenterLinePath(
     *route_handler, lanelet_sequence, pose, p.backward_path_length, p.forward_path_length, p);
 
-  motion_utils::convertToRearWheelCenter(centerline_path->points, -p.rear_overhang);
-
   centerline_path->header = route_handler->getRouteHeader();
 
   util::generateDrivableArea(*centerline_path, drivable_lanes, p.vehicle_length, planner_data);
@@ -1779,7 +1814,30 @@ PathWithLaneId getCenterLinePath(
     s_forward = std::min(s_forward, goal_arc_coordinates.length - lane_change_buffer);
   }
 
-  return route_handler.getCenterLinePath(lanelet_sequence, s_backward, s_forward, true);
+  // get centerline from route
+  const auto raw_path_with_lane_id =
+    route_handler.getCenterLinePath(lanelet_sequence, s_backward, s_forward, true);
+
+  auto resampled_path_with_lane_id = motion_utils::resamplePath(raw_path_with_lane_id, 1.0);
+
+  // TODO(murooka) calc yaw directly from path_with_lane_id
+  std::vector<geometry_msgs::msg::Point> points;
+  for (const auto point : resampled_path_with_lane_id.points) {
+    points.push_back(point.point.pose.position);
+  }
+
+  const auto yaw_vec = interpolation::splineYawFromPoints(points);
+  for (size_t i = 0; i < resampled_path_with_lane_id.points.size(); ++i) {
+    resampled_path_with_lane_id.points.at(i).point.pose.orientation =
+      tier4_autoware_utils::createQuaternionFromYaw(yaw_vec.at(i));
+  }
+
+  // convert centerline, which we consider as CoG center,  to rear wheel center
+  const double rear_to_cog = parameter.vehicle_length / 2 - parameter.rear_overhang;
+  motion_utils::convertToRearWheelCenter(
+    resampled_path_with_lane_id.points, parameter.rear_overhang);
+
+  return resampled_path_with_lane_id;
 }
 
 bool checkLaneIsInIntersection(

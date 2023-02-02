@@ -15,6 +15,7 @@
 #ifndef MOTION_UTILS__TRAJECTORY__TRAJECTORY_HPP_
 #define MOTION_UTILS__TRAJECTORY__TRAJECTORY_HPP_
 
+#include "interpolation/spline_interpolation_points_2d.hpp"
 #include "tier4_autoware_utils/geometry/geometry.hpp"
 #include "tier4_autoware_utils/geometry/pose_deviation.hpp"
 #include "tier4_autoware_utils/math/constants.hpp"
@@ -1357,7 +1358,6 @@ size_t findFirstNearestSegmentIndexWithSoftConstraints(
   return nearest_idx;
 }
 
-// NOTE: rear_offset is signed
 template <class T>
 void convertToRearWheelCenter(
   std::vector<T> & points, const double rear_to_cog,
@@ -1365,20 +1365,22 @@ void convertToRearWheelCenter(
 {
   const auto cog_points = points;
 
-  const auto curvatures = calcCurvature(points);
+  // calculate curvature from spline interpolation
+  const auto spline = SplineInterpolationPoints2d(points);
+  const auto curvatures = spline.getSplineInterpolatedCurvatures();
 
   for (size_t i = 0; i < cog_points.size() - 1; ++i) {  // TODO(murooka) consider last pose
-    // calculate beta, which is cog's velocity direction
+    // calculate beta, which is CoG's velocity direction
     const double beta = std::asin(rear_to_cog * curvatures.at(i));
 
-    // apply beta to cog pose
+    // apply beta to CoG pose
     geometry_msgs::msg::Pose cog_pose_with_beta;
     cog_pose_with_beta.position = tier4_autoware_utils::getPoint(cog_points.at(i));
     const double yaw = tf2::getYaw(tier4_autoware_utils::getPose(cog_points.at(i)).orientation);
     cog_pose_with_beta.orientation = tier4_autoware_utils::createQuaternionFromYaw(yaw - beta);
 
     const auto rear_pose =
-      tier4_autoware_utils::calcOffsetPose(cog_pose_with_beta, rear_offset, 0.0, 0.0);
+      tier4_autoware_utils::calcOffsetPose(cog_pose_with_beta, -rear_to_cog, 0.0, 0.0);
 
     // update pose
     tier4_autoware_utils::setPose(rear_pose, points.at(i));
