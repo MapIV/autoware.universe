@@ -87,6 +87,8 @@ IntersectionModule::IntersectionModule(
   has_traffic_light_ =
     !(assigned_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>().empty());
   state_machine_.setMarginTime(planner_param_.state_transit_margin_time);
+  two_stop_state_.setMarginTime(3.0 /* [s] */);
+  two_stop_state_.setState(IntersectionModule::State::STOP);
 }
 
 IntersectionModule::~IntersectionModule() {}
@@ -246,16 +248,27 @@ bool IntersectionModule::modifyPathVelocity(
       std::cout << "occlusion but collision line failed to generate" << std::endl;
     } else if (util::isBeforeTargetIndex(
                  *path, closest_idx, current_pose.pose, collision_stop_line_idx_opt.value())) {
-      // do two phase stopping
-      is_entry_prohibited = true;
-      stop_line_idx = collision_stop_line_idx_opt;
-      extra_stop_line_idx = occlusion_stop_line_idx_opt;
-      // insert creep velocity [collision_stop_line, occlusion_stop_line)
-      insert_creep_during_occlusion =
-        std::make_pair(collision_stop_line_idx_opt.value(), occlusion_stop_line_idx_opt.value());
-      prev_occlusion_stop_line_pose_ =
-        path_ip.points.at(occlusion_stop_line_idx_opt.value()).point.pose;
-      std::cout << "do two phase stop" << std::endl;
+      if (two_stop_state_.getState() == IntersectionModule::State::GO) {
+        is_entry_prohibited = true;
+        stop_line_idx = occlusion_stop_line_idx_opt;
+      } else {
+        const double dist_to_first_stop = tier4_autoware_utils::calcDistance2d(
+          path->points.at(collision_stop_line_idx_opt.value()), path->points.at(closest_idx));
+        if (dist_to_first_stop < 0.3) {
+          two_stop_state_.setStateWithMarginTime(
+            IntersectionModule::State::GO, logger_.get_child("two_stop_state"), *clock_);
+        }
+        // do two phase stopping
+        is_entry_prohibited = true;
+        stop_line_idx = collision_stop_line_idx_opt;
+        extra_stop_line_idx = occlusion_stop_line_idx_opt;
+        // insert creep velocity [collision_stop_line, occlusion_stop_line)
+        insert_creep_during_occlusion =
+          std::make_pair(collision_stop_line_idx_opt.value(), occlusion_stop_line_idx_opt.value());
+        prev_occlusion_stop_line_pose_ =
+          path_ip.points.at(occlusion_stop_line_idx_opt.value()).point.pose;
+        std::cout << "do two phase stop" << std::endl;
+      }
     } else {
       is_entry_prohibited = true;
       stop_line_idx = occlusion_stop_line_idx_opt;

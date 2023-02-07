@@ -333,6 +333,7 @@ private:
     const Polygon2d & stuck_vehicle_detect_area,
     const autoware_auto_perception_msgs::msg::PredictedObject & object) const;
   StateMachine state_machine_;  //! for state
+  StateMachine two_stop_state_;
 
   std::optional<size_t> findNearestOcclusionProjectedPosition(
     const nav_msgs::msg::OccupancyGrid & occ_grid,

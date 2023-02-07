@@ -178,7 +178,7 @@ visualization_msgs::msg::MarkerArray IntersectionModule::createVirtualWallMarker
   if (debug_data_.extra_stop) {
     appendMarkerArray(
       motion_utils::createStopVirtualWallMarker(
-        debug_data_.extra_stop_wall_pose, "intersection", now, module_id_),
+        debug_data_.extra_stop_wall_pose, "intersection", now, module_id_ + 1),
       &wall_marker, now);
   }
   return wall_marker;
