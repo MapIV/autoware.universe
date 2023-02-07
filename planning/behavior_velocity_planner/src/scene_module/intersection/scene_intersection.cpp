@@ -253,7 +253,7 @@ bool IntersectionModule::modifyPathVelocity(
         stop_line_idx = occlusion_stop_line_idx_opt;
       } else {
         const double dist_to_first_stop = tier4_autoware_utils::calcDistance2d(
-          path->points.at(collision_stop_line_idx_opt.value()), path->points.at(closest_idx));
+          path->points.at(collision_stop_line_idx_opt.value()), current_pose.pose);
         if (dist_to_first_stop < 0.3) {
           two_stop_state_.setStateWithMarginTime(
             IntersectionModule::State::GO, logger_.get_child("two_stop_state"), *clock_);
