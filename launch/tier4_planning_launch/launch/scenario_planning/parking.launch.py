@@ -76,6 +76,7 @@ def launch_setup(context, *args, **kwargs):
                         "use_parkinglot": True,
                         "use_objects": True,
                         "use_points": True,
+                        "activate_by_scenario": False,
                         "grid_min_value": 0.0,
                         "grid_max_value": 1.0,
                         "grid_resolution": 0.2,
