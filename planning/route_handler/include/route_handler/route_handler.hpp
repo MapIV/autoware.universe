@@ -27,7 +27,9 @@
 #include <autoware_planning_msgs/msg/lanelet_primitive.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/lanelet_segment.hpp>
+#include <autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <lanelet2_routing/Route.h>
 #include <lanelet2_routing/RoutingCost.h>
@@ -47,9 +49,11 @@ using autoware_auto_planning_msgs::msg::PathPointWithLaneId;
 using autoware_auto_planning_msgs::msg::PathWithLaneId;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::LaneletSegment;
+using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseStamped;
 using std_msgs::msg::Header;
+using unique_identifier_msgs::msg::UUID;
 using RouteSections = std::vector<autoware_planning_msgs::msg::LaneletSegment>;
 
 enum class LaneChangeDirection { NONE, LEFT, RIGHT };
@@ -73,6 +77,7 @@ public:
   bool isHandlerReady() const;
   lanelet::ConstPolygon3d getExtraDrivableAreaById(const lanelet::Id id) const;
   Header getRouteHeader() const;
+  UUID getRouteUuid() const;
 
   // for routing graph
   bool isMapMsgReady() const;
@@ -178,6 +183,15 @@ public:
     bool is_opposite = true, const bool & invert_opposite = false) const noexcept;
 
   /**
+   * @brief Check if same-direction lane is available at the right side of the lanelet
+   * Searches for any lanes regardless of whether it is lane-changeable or not.
+   * Required the linestring to be shared(same line ID) between the lanelets.
+   * @param the lanelet of interest
+   * @return vector of lanelet having same direction if true
+   */
+  lanelet::ConstLanelet getMostRightLanelet(const lanelet::ConstLanelet & lanelet) const;
+
+  /**
    * @brief Check if same-direction lane is available at the left side of the lanelet
    * Searches for any lanes regardless of whether it is lane-changeable or not.
    * Required the linestring to be shared(same line ID) between the lanelets.
@@ -233,6 +247,19 @@ public:
   lanelet::ConstLineStrings3d getFurthestLinestring(
     const lanelet::ConstLanelet & lanelet, bool is_right = true, bool is_left = true,
     bool is_opposite = true) const noexcept;
+
+  /**
+   * Retrieves a sequence of lanelets before the given lanelet.
+   * The total length of retrieved lanelet sequence at least given length. Returned lanelet sequence
+   * does not include input lanelet.]
+   * @param graph [input lanelet routing graph]
+   * @param lanelet [input lanelet]
+   * @param length [minimum length of retrieved lanelet sequence]
+   * @return   [lanelet sequence that leads to given lanelet]
+   */
+  std::vector<lanelet::ConstLanelets> getPrecedingLaneletSequence(
+    const lanelet::ConstLanelet & lanelet, const double length,
+    const lanelet::ConstLanelets & exclude_lanelets = {}) const;
 
   int getNumLaneToPreferredLane(const lanelet::ConstLanelet & lanelet) const;
   bool getClosestLaneletWithinRoute(
