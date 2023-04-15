@@ -424,14 +424,38 @@ void PlanningInterfaceTestManager::testOffTrackFromPath(rclcpp::Node::SharedPtr 
 void PlanningInterfaceTestManager::testOffTrackFromPathWithLaneId(
   rclcpp::Node::SharedPtr target_node)
 {
-  // write me
-  (void)target_node;
+  if (input_path_with_lane_id_name_.empty()) {
+    throw std::runtime_error("trajectory topic name is not set");
+  }
+  if (input_initial_pose_name_.empty()) {
+    throw std::runtime_error("initial pose topic name is not set");
+  }
+
+  publishNominalPathWithLaneId(target_node, input_path_with_lane_id_name_);
+
+  const std::vector<double> deviation_from_route = {0.0, 1.0, 10.0, 100.0};
+  for (const auto & deviation : deviation_from_route) {
+    publishInitialPoseData(target_node, input_odometry_name_);
+    test_utils::spinSomeNodes(test_node_, target_node, 3);
+  }
 }
 
 void PlanningInterfaceTestManager::testOffTrackFromTrajectory(rclcpp::Node::SharedPtr target_node)
 {
-  // write me
-  (void)target_node;
+  if (input_trajectory_name_.empty()) {
+    throw std::runtime_error("trajectory topic name is not set");
+  }
+  if (input_odometry_name_.empty()) {
+    throw std::runtime_error("odometry topic pose name is not set");
+  }
+
+  publishNominalTrajectory(target_node, input_trajectory_name_);
+
+  const std::vector<double> deviation_from_route = {0.0, 1.0, 10.0, 100.0};
+  for (const auto & deviation : deviation_from_route) {
+    publishOdometry(target_node, input_odometry_name_);
+    test_utils::spinSomeNodes(test_node_, target_node, 3);
+  }
 }
 
 int PlanningInterfaceTestManager::getReceivedTopicNum()
