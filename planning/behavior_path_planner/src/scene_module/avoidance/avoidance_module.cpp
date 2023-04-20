@@ -117,15 +117,22 @@ bool AvoidanceModule::isExecutionRequested() const
   }
 #else
   fillShiftLine(avoid_data, debug_data_);
-
-  if (avoid_data.unapproved_new_sl.empty()) {
-    return false;
-  }
 #endif
 
   if (parameters_->publish_debug_marker) {
     setDebugData(avoid_data, path_shifter_, debug_data_);
   }
+
+#ifndef USE_OLD_ARCHITECTURE
+  // there is object that should be avoid. return true.
+  if (!!avoid_data.stop_target_object) {
+    return true;
+  }
+
+  if (avoid_data.unapproved_new_sl.empty()) {
+    return false;
+  }
+#endif
 
   return !avoid_data.target_objects.empty();
 }
