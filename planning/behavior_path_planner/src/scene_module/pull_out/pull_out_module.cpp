@@ -696,14 +696,27 @@ bool PullOutModule::hasFinishedPullOut() const
     return false;
   }
 
-  // check ego car is close enough to goal pose
+  // keep running until returning to the path, considering that other modules (e.g avoidance)
+  // are also running at the same time.
+  const double lateral_offset_to_path =
+    motion_utils::calcLateralOffset(getCurrentPath().points, current_pose.position);
+  constexpr double lateral_offset_threshold = 0.5;
+  if (std::abs(lateral_offset_to_path) > lateral_offset_threshold) {
+    return false;
+  }
+  const double yaw_deviation =
+    motion_utils::calcYawDeviation(getCurrentPath().points, current_pose);
+  constexpr double yaw_deviation_threshold = 0.5;
+  if (std::abs(yaw_deviation) > yaw_deviation_threshold) {
+    return false;
+  }
+
+  // check that ego has passed pull out end point
   const auto current_pose = planner_data_->self_odometry->pose.pose;
   const auto arclength_current =
     lanelet::utils::getArcCoordinates(status_.current_lanes, current_pose);
   const auto arclength_pull_out_end =
     lanelet::utils::getArcCoordinates(status_.current_lanes, status_.pull_out_path.end_pose);
-
-  // has passed pull out end point
   return arclength_current.length - arclength_pull_out_end.length > 0.0;
 }
 
