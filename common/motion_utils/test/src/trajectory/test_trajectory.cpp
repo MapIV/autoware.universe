@@ -5238,3 +5238,35 @@ TEST(Trajectory, removeInvalidOrientationPoints)
     },
     1);  // expected size is 1 since only the first point remains
 }
+
+TEST(trajectory, calcYawDeviation)
+{
+  using autoware_auto_planning_msgs::msg::TrajectoryPoint;
+  using motion_utils::calcYawDeviation;
+
+  double tolerance = 1e-3;
+
+  // Generate test trajectory
+  size_t num_points = 4;
+  double point_interval = 10.0;
+  double initial_theta = 0.0;
+  double delta_theta = M_PI / 8;
+  auto trajectory =
+    generateTestTrajectory<Trajectory>(num_points, point_interval, 0.0, initial_theta, delta_theta);
+
+  // check with fist point
+  {
+    auto input_pose = createPose(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    double yaw_deviation = calcYawDeviation(trajectory.points, input_pose);
+    double expected_yaw_deviation = -M_PI / 8;
+    EXPECT_NEAR(yaw_deviation, expected_yaw_deviation, tolerance);
+  }
+
+  // check with middle point
+  {
+    auto input_pose = createPose(10.0, 10.0, 0.0, 0.0, 0.0, M_PI / 8);
+    double yaw_deviation = calcYawDeviation(trajectory.points, input_pose);
+    double expected_yaw_deviation = -0.734;
+    EXPECT_NEAR(yaw_deviation, expected_yaw_deviation, tolerance);
+  }
+}
