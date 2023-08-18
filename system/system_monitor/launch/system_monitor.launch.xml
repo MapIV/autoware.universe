@@ -8,7 +8,7 @@
   <arg name="gpu_monitor_config_file" default="$(find-pkg-share tier4_system_launch)/config/system_monitor/gpu_monitor.param.yaml"/>
   <arg name="voltage_monitor_config_file" default="$(find-pkg-share tier4_system_launch)/config/system_monitor/voltage_monitor.param.yaml"/>
 
-  <group>
+  <!-- <group>
     <node_container pkg="rclcpp_components" exec="component_container_mt" name="system_monitor_container" namespace="system_monitor" output="screen">
       <composable_node pkg="system_monitor" plugin="CPUMonitor" name="cpu_monitor">
         <param from="$(var cpu_monitor_config_file)"/>
@@ -35,5 +35,5 @@
         <param from="$(var voltage_monitor_config_file)"/>
       </composable_node>
     </node_container>
-  </group>
+  </group> -->
 </launch>

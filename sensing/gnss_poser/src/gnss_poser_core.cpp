@@ -126,7 +126,9 @@ void GNSSPoser::callbackNavSatFix(
   geometry_msgs::msg::PoseStamped gnss_base_pose_msg{};
   gnss_base_pose_msg.header.stamp = nav_sat_fix_msg_ptr->header.stamp;
   gnss_base_pose_msg.header.frame_id = map_frame_;
+
   tf2::toMsg(tf_map2base_link, gnss_base_pose_msg.pose);
+  // tf2::toMsg(tf_map2gnss_antenna, gnss_base_pose_msg.pose);
 
   // publish gnss_base_link pose in map frame
   pose_pub_->publish(gnss_base_pose_msg);

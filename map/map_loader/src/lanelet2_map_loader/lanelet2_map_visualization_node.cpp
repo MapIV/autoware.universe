@@ -114,6 +114,10 @@ void Lanelet2MapVisualizationNode::onMapBin(
   lanelet::ConstPolygons3d parking_lots = lanelet::utils::query::getAllParkingLots(viz_lanelet_map);
   lanelet::ConstPolygons3d obstacle_polygons =
     lanelet::utils::query::getAllObstaclePolygons(viz_lanelet_map);
+  lanelet::ConstPolygons3d gnss_available_area_polygon =
+    lanelet::utils::query::getAllGnssAvailableArea(viz_lanelet_map);
+  lanelet::ConstPolygons3d switching_area_polygon =
+    lanelet::utils::query::getAllSwitchingArea(viz_lanelet_map);
   lanelet::ConstPolygons3d no_obstacle_segmentation_area =
     lanelet::utils::query::getAllPolygonsByType(viz_lanelet_map, "no_obstacle_segmentation_area");
   lanelet::ConstPolygons3d no_obstacle_segmentation_area_for_run_out =
@@ -123,7 +127,7 @@ void Lanelet2MapVisualizationNode::onMapBin(
   std_msgs::msg::ColorRGBA cl_road, cl_shoulder, cl_cross, cl_partitions, cl_pedestrian_markings,
     cl_ll_borders, cl_shoulder_borders, cl_stoplines, cl_trafficlights, cl_detection_areas,
     cl_parking_lots, cl_parking_spaces, cl_lanelet_id, cl_obstacle_polygons, cl_no_stopping_areas,
-    cl_no_obstacle_segmentation_area, cl_no_obstacle_segmentation_area_for_run_out;
+    cl_no_obstacle_segmentation_area, cl_no_obstacle_segmentation_area_for_run_out, cl_gnss_available_area, cl_switching_area;
   setColor(&cl_road, 0.27, 0.27, 0.27, 0.999);
   setColor(&cl_shoulder, 0.15, 0.15, 0.15, 0.999);
   setColor(&cl_cross, 0.27, 0.3, 0.27, 0.5);
@@ -141,6 +145,8 @@ void Lanelet2MapVisualizationNode::onMapBin(
   setColor(&cl_lanelet_id, 0.5, 0.5, 0.5, 0.999);
   setColor(&cl_no_obstacle_segmentation_area, 0.37, 0.37, 0.27, 0.5);
   setColor(&cl_no_obstacle_segmentation_area_for_run_out, 0.37, 0.7, 0.27, 0.5);
+  setColor(&cl_gnss_available_area, 0.4, 0.27, 0.27, 0.5);
+  setColor(&cl_switching_area, 0.27, 0.27, 0.4, 0.5);
 
   visualization_msgs::msg::MarkerArray map_marker_array;
 
@@ -211,6 +217,14 @@ void Lanelet2MapVisualizationNode::onMapBin(
     &map_marker_array,
     lanelet::visualization::noObstacleSegmentationAreaForRunOutAsMarkerArray(
       no_obstacle_segmentation_area_for_run_out, cl_no_obstacle_segmentation_area_for_run_out));
+
+  insertMarkerArray(
+    &map_marker_array,
+    lanelet::visualization::gnssavailableareaPolygonsAsMarkerArray(gnss_available_area_polygon, cl_gnss_available_area));
+
+  insertMarkerArray(
+    &map_marker_array,
+    lanelet::visualization::switchingareaPolygonsAsMarkerArray(switching_area_polygon, cl_switching_area));
 
   pub_marker_->publish(map_marker_array);
 }
