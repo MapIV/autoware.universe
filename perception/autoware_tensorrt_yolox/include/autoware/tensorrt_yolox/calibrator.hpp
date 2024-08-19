@@ -53,7 +53,9 @@
 #include <string>
 #include <vector>
 
-namespace autoware::tensorrt_yolox
+namespace autoware
+{
+namespace tensorrt_yolox
 {
 class ImageStream
 {
@@ -488,6 +490,7 @@ private:
   std::vector<char> hist_cache_;
   double scale_;
 };
-}  // namespace autoware::tensorrt_yolox
+}  // namespace tensorrt_yolox
+}  // namespace autoware
 
 #endif  // AUTOWARE__TENSORRT_YOLOX__CALIBRATOR_HPP_

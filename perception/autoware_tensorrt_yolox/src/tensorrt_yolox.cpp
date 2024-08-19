@@ -151,7 +151,9 @@ std::vector<autoware::tensorrt_yolox::Colormap> get_seg_colormap(const std::stri
 
 }  // anonymous namespace
 
-namespace autoware::tensorrt_yolox
+namespace autoware
+{
+namespace tensorrt_yolox
 {
 TrtYoloX::TrtYoloX(
   const std::string & model_path, const std::string & precision, const int num_class,
@@ -1265,4 +1267,5 @@ void TrtYoloX::getColorizedMask(
   }
 }
 
-}  // namespace autoware::tensorrt_yolox
+}  // namespace tensorrt_yolox
+}  // namespace autoware

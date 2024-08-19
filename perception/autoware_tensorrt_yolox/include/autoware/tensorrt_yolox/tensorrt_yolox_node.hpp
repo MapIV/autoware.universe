@@ -42,7 +42,9 @@
 #include <string>
 #include <vector>
 
-namespace autoware::tensorrt_yolox
+namespace autoware
+{
+namespace tensorrt_yolox
 {
 // cspell: ignore Semseg
 using LabelMap = std::map<int, std::string>;
@@ -110,6 +112,7 @@ private:
   std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
 };
 
-}  // namespace autoware::tensorrt_yolox
+}  // namespace tensorrt_yolox
+}  // namespace autoware
 
 #endif  // AUTOWARE__TENSORRT_YOLOX__TENSORRT_YOLOX_NODE_HPP_

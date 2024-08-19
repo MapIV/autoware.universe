@@ -26,7 +26,9 @@ namespace fs = ::std::experimental::filesystem;
 #include <memory>
 #include <string>
 
-namespace autoware::tensorrt_yolox
+namespace autoware
+{
+namespace tensorrt_yolox
 {
 class YoloXSingleImageInferenceNode : public rclcpp::Node
 {
@@ -67,7 +69,8 @@ public:
     rclcpp::shutdown();
   }
 };
-}  // namespace autoware::tensorrt_yolox
+}  // namespace tensorrt_yolox
+}  // namespace autoware
 
 #include "rclcpp_components/register_node_macro.hpp"
 RCLCPP_COMPONENTS_REGISTER_NODE(autoware::tensorrt_yolox::YoloXSingleImageInferenceNode)

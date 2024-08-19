@@ -24,7 +24,9 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::tensorrt_yolox
+namespace autoware
+{
+namespace tensorrt_yolox
 {
 TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
 : Node("tensorrt_yolox", node_options)
@@ -281,7 +283,8 @@ void TrtYoloXNode::overlapSegmentByRoi(
                        .rowRange(roi_y_offset, roi_y_offset + roi_height));
 }
 
-}  // namespace autoware::tensorrt_yolox
+}  // namespace tensorrt_yolox
+}  // namespace autoware
 
 #include "rclcpp_components/register_node_macro.hpp"
 RCLCPP_COMPONENTS_REGISTER_NODE(autoware::tensorrt_yolox::TrtYoloXNode)

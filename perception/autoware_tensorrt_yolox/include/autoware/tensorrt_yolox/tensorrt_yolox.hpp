@@ -25,7 +25,9 @@
 #include <string>
 #include <vector>
 
-namespace autoware::tensorrt_yolox
+namespace autoware
+{
+namespace tensorrt_yolox
 {
 using cuda_utils::CudaUniquePtr;
 using cuda_utils::CudaUniquePtrHost;
@@ -312,6 +314,7 @@ private:
   std::vector<tensorrt_yolox::Colormap> sematic_color_map_;
 };
 
-}  // namespace autoware::tensorrt_yolox
+}  // namespace tensorrt_yolox
+}  // namespace autoware
 
 #endif  // AUTOWARE__TENSORRT_YOLOX__TENSORRT_YOLOX_HPP_
