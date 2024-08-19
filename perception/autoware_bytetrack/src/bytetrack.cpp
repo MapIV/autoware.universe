@@ -18,7 +18,9 @@
 #include <fstream>
 #include <functional>
 
-namespace autoware::bytetrack
+namespace autoware
+{
+namespace bytetrack
 {
 ByteTrack::ByteTrack(const int track_buffer_length)
 {
@@ -66,4 +68,5 @@ ObjectArray ByteTrack::update_tracker(ObjectArray & input_objects)
   do_inference(input_objects);
   return latest_objects_;
 }
-}  // namespace autoware::bytetrack
+} // namespace bytetrack
+} // namespace autoware

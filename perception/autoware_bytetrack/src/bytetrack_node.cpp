@@ -23,7 +23,9 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::bytetrack
+namespace autoware
+{
+namespace bytetrack
 {
 ByteTrackNode::ByteTrackNode(const rclcpp::NodeOptions & node_options)
 : Node("bytetrack", node_options)
@@ -114,7 +116,8 @@ void ByteTrackNode::on_rect(
   out_objects_uuid.header = msg->header;
   objects_uuid_pub_->publish(out_objects_uuid);
 }
-}  // namespace autoware::bytetrack
+} // namespace bytetrack
+} // namespace autoware
 
 #include "rclcpp_components/register_node_macro.hpp"
 RCLCPP_COMPONENTS_REGISTER_NODE(autoware::bytetrack::ByteTrackNode)

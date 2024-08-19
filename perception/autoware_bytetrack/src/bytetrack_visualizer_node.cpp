@@ -26,7 +26,9 @@
 #include <chrono>
 #include <string>
 
-namespace autoware::bytetrack
+namespace autoware
+{
+namespace bytetrack
 {
 
 ByteTrackVisualizerNode::ByteTrackVisualizerNode(const rclcpp::NodeOptions & node_options)
@@ -190,7 +192,8 @@ void ByteTrackVisualizerNode::draw(
   }
 }
 
-}  // namespace autoware::bytetrack
+} // namespace bytetrack
+} // namespace autoware
 
 #include "rclcpp_components/register_node_macro.hpp"
 RCLCPP_COMPONENTS_REGISTER_NODE(autoware::bytetrack::ByteTrackVisualizerNode)
